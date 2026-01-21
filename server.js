@@ -1,46 +1,33 @@
 const express = require("express");
-const scrapeExternalJobLinks = require("./scraper");
+const scrapeJobs = require("./scraper");
 
 const app = express();
 const PORT = 3000;
 
-// Default home route
-app.get("/", (req, res) => {
-  res.send(
-    "<h2>Welcome to Job Scraper API</h2>" +
-    "<p>Use <code>/scrape-jobs</code> to start scraping and <code>/jobs</code> to view results.</p>"
-  );
-});
+app.use(express.json());
 
-// Route to start scraping
-app.get("/scrape-jobs", async (req, res) => {
+app.post("/scrape-jobs", async (req, res) => {
   try {
-    res.status(202).json({ message: "Scraping started. Please wait..." });
+    const jobs = await scrapeJobs();
 
-    const links = await scrapeExternalJobLinks();
-    console.log("Scraping completed");
-    console.log(links);
+    return res.status(200).json({
+      status: "success",
+      code: 200,
+      count: jobs.length,
+      data: jobs
+    });
   } catch (error) {
     console.error(error);
+
+    return res.status(500).json({
+      status: "error",
+      code: 500,
+      message: "Scraping failed",
+      error: error.message
+    });
   }
 });
 
-// Route to get saved scraped jobs
-app.get("/jobs", (req, res) => {
-  try {
-    const data = require("./external_job_links.json");
-    res.json({ total: data.length, links: data });
-  } catch (err) {
-    res.status(500).json({ error: "No data found" });
-  }
-});
-
-// Catch-all for wrong routes
-app.use((req, res) => {
-  res.status(404).json({ error: "Route not found. Check your URL!" });
-});
-
-// Start server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
