@@ -1,14 +1,14 @@
 const express = require("express");
-const scrapeJobs = require("./scraper");
+const naukrigulfJobsScraper = require("./NaukriGulf-Scraper");
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
 
-app.post("/scrape-jobs", async (req, res) => {
+app.post("/naukri-gulf", async (req, res) => {
   try {
-    const jobs = await scrapeJobs();
+    const jobs = await naukrigulfJobsScraper();
 
     return res.status(200).json({
       status: "success",
