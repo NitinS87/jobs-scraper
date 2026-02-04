@@ -1,3 +1,4 @@
+
 # Dependencies
 node_modules/
 npm-debug.log*
@@ -14,3 +15,8 @@ external_job_links.json
 .env.local
 .env.development.local
 .env.test.
+
+node_modules/
+.env
+*.json
+
