@@ -1,0 +1,22 @@
+{
+  "name": "job-scraper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "runScrapers.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.13.6",
+    "cheerio": "^1.2.0",
+    "puppeteer": "^24.38.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "selenium-webdriver": "^4.41.0",
+    "xml2js": "^0.6.2"
+  }
+}
