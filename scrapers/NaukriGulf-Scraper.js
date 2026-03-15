@@ -1,5 +1,12 @@
-const { Builder, By, until } = require("selenium-webdriver");
-const chrome = require("selenium-webdriver/chrome");
+const { chromium } = require("playwright");
+
+const USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+const BASE_URL = "https://www.naukrigulf.com";
+const START_URL = `${BASE_URL}/software-engineer-jobs?easyApply=false`;
+const MAX_JOBS = 100;
+const BATCH_SIZE = 5;
+const BATCH_DELAY_MS = 2000;
 
 function parseExperienceToLevel(expStr) {
   if (!expStr) return null;
@@ -14,8 +21,9 @@ function parseExperienceToLevel(expStr) {
 
 function parseSalary(salaryStr) {
   if (!salaryStr) return { min: null, max: null, currency: null };
-  // Pattern: "AED 8,000 - 12,000" or "8000 - 12000 AED"
-  const match = salaryStr.match(/(AED|USD|EUR)?\s*([\d,]+)\s*[-–—to]+\s*([\d,]+)\s*(AED|USD|EUR)?/i);
+  const match = salaryStr.match(
+    /(AED|USD|EUR)?\s*([\d,]+)\s*[-\u2013\u2014to]+\s*([\d,]+)\s*(AED|USD|EUR)?/i
+  );
   if (!match) return { min: null, max: null, currency: null };
   return {
     min: parseInt(match[2].replace(/,/g, ""), 10),
@@ -35,195 +43,313 @@ function mapJobType(typeStr) {
   return null;
 }
 
-async function scrapeNaukriGulf() {
-  const options = new chrome.Options();
-  options.addArguments("--window-size=1920,1080");
-  options.addArguments("--disable-blink-features=AutomationControlled");
-  options.excludeSwitches("enable-automation");
-  options.addArguments(
-    '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-  );
-
-  const driver = await new Builder()
-    .forBrowser("chrome")
-    .setChromeOptions(options)
-    .build();
-
-  const results = [];
-  let jobsCollected = 0;
-
-  try {
-    await driver.get(
-      "https://www.naukrigulf.com/software-engineer-jobs?easyApply=false"
+function extractJsonLd(page) {
+  return page.evaluate(() => {
+    const scripts = document.querySelectorAll(
+      'script[type="application/ld+json"]'
     );
-    await driver.sleep(5000);
+    for (const script of scripts) {
+      try {
+        const data = JSON.parse(script.textContent);
+        if (data["@type"] === "JobPosting") return data;
+        if (Array.isArray(data)) {
+          const posting = data.find((d) => d["@type"] === "JobPosting");
+          if (posting) return posting;
+        }
+      } catch {
+        // ignore malformed JSON-LD
+      }
+    }
+    return null;
+  });
+}
 
-    let hasNextPage = true;
+async function scrapeDetailPage(browser, url) {
+  const page = await browser.newPage();
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForTimeout(2000);
 
-    while (hasNextPage && jobsCollected < 15) {
-      await driver.wait(
-        until.elementsLocated(By.css(".ng-box.srp-tuple")),
-        10000
-      );
+    // Try JSON-LD first
+    const jsonLd = await extractJsonLd(page);
 
-      const jobs = await driver.findElements(By.css(".ng-box.srp-tuple"));
+    let title = null;
+    let company = "Not Mentioned";
+    let location = null;
+    let salaryStr = null;
+    let experienceStr = null;
+    let jobTypeStr = null;
+    let descriptionHtml = "";
+    let companyWebsite = null;
+    let postedAt = null;
+    let reqQuals = [];
 
-      for (const job of jobs) {
-        if (jobsCollected >= 15) break;
-
-        try {
-          const easyApplyElements = await job.findElements(
-            By.xpath(".//span[contains(text(),'Easy Apply')]")
-          );
-          if (easyApplyElements.length > 0) continue;
-
-          const mainLinkElement = await job.findElement(
-            By.css("a.info-position")
-          );
-          const mainJobUrl = await mainLinkElement.getAttribute("href");
-
-          await driver.executeScript(
-            `window.open('${mainJobUrl}', '_blank');`
-          );
-          await driver.sleep(3000);
-
-          const handles = await driver.getAllWindowHandles();
-          await driver.switchTo().window(handles[handles.length - 1]);
-
-          // Job title
-          const titleElement = await driver.findElement(
-            By.css("h1.info-position")
-          );
-          const titleText = await titleElement.getText();
-          const title = titleText.split("\n")[0];
-
-          // Company name
-          let company = "Not Mentioned";
-          try {
-            const companyElement = await driver.findElement(
-              By.css("p.info-org")
-            );
-            company = await companyElement.getText();
-          } catch {}
-
-          // Candidate requirements
-          const requirements = {};
-          const requirementBlocks = await driver.findElements(
-            By.css(".candidate-profile .col")
-          );
-
-          for (const block of requirementBlocks) {
-            const head = await block.findElement(By.css(".head")).getText();
-            const value = await block.findElement(By.css(".value")).getText();
-            requirements[head.toLowerCase().replace(/\s+/g, "_")] = value;
-          }
-
-          // Job description
-          const descriptionElements = await driver.findElements(
-            By.css("article.job-description")
-          );
-
-          let fullDescription = "";
-          for (const desc of descriptionElements) {
-            fullDescription += (await desc.getText()) + "\n\n";
-          }
-
-          // External company link
-          await driver.wait(
-            until.elementLocated(
-              By.css(".jd-company-desc a.anchor.ng-link")
-            ),
-            10000
-          );
-
-          const externalLinkElement = await driver.findElement(
-            By.css(".jd-company-desc a.anchor.ng-link")
-          );
-          const externalLink = await externalLinkElement.getAttribute("href");
-
-          if (
-            externalLink &&
-            !results.some((r) => r.external_job_id === mainJobUrl)
-          ) {
-            // Parse structured requirements
-            const salary = parseSalary(requirements.salary);
-            const urlPath = mainJobUrl.split("/").filter(Boolean).pop() || mainJobUrl;
-
-            // Extract company website domain from externalLink
-            let companyWebsite = null;
-            try {
-              companyWebsite = new URL(externalLink).origin;
-            } catch {}
-
-            // Build required_qualifications from education
-            const reqQuals = [];
-            if (requirements.education) reqQuals.push(requirements.education);
-
-            results.push({
-              title,
-              source_url: mainJobUrl,
-              description: fullDescription.trim(),
-              posted_at: null,
-              external_job_id: urlPath,
-              external_source: "NaukriGulf",
-              source_type: "SCRAPER",
-              source_base_url: "https://www.naukrigulf.com",
-              is_remote: false,
-              location: requirements.location || null,
-              country_code: "AE",
-              job_type: mapJobType(requirements.job_type || requirements.employment_type),
-              experience_level: parseExperienceToLevel(requirements.experience),
-              salary_min: salary.min,
-              salary_max: salary.max,
-              salary_currency: salary.currency,
-              required_qualifications: reqQuals,
-              categories: [],
-              company: {
-                name: company,
-                website: companyWebsite,
-                location: requirements.location || null,
-                country_code: "AE",
-              },
-            });
-
-            jobsCollected++;
-            console.log(`Collected (${jobsCollected}/15): ${title}`);
-          }
-
-          await driver.close();
-          await driver.switchTo().window(handles[0]);
-          await driver.sleep(1000);
-        } catch (err) {
-          console.log("Skipped one job due to error");
-          const handles = await driver.getAllWindowHandles();
-          if (handles.length > 1) {
-            await driver.switchTo().window(handles[0]);
-          }
+    if (jsonLd) {
+      title = jsonLd.title || null;
+      company =
+        jsonLd.hiringOrganization?.name || company;
+      companyWebsite =
+        jsonLd.hiringOrganization?.sameAs ||
+        jsonLd.hiringOrganization?.url ||
+        null;
+      location =
+        jsonLd.jobLocation?.address?.addressLocality ||
+        jsonLd.jobLocation?.address?.addressRegion ||
+        null;
+      descriptionHtml = jsonLd.description || "";
+      jobTypeStr = Array.isArray(jsonLd.employmentType)
+        ? jsonLd.employmentType[0]
+        : jsonLd.employmentType || null;
+      experienceStr = jsonLd.experienceRequirements?.monthsOfExperience
+        ? `${Math.round(jsonLd.experienceRequirements.monthsOfExperience / 12)} years`
+        : null;
+      if (jsonLd.baseSalary) {
+        const val = jsonLd.baseSalary.value;
+        if (val?.minValue && val?.maxValue) {
+          salaryStr = `${jsonLd.baseSalary.currency || "AED"} ${val.minValue} - ${val.maxValue}`;
         }
       }
-
-      if (jobsCollected < 15) {
-        try {
-          const nextBtn = await driver.findElement(
-            By.css("a[aria-label='Next']")
-          );
-          await driver.executeScript(
-            "arguments[0].scrollIntoView(true);",
-            nextBtn
-          );
-          await driver.sleep(1000);
-          await nextBtn.click();
-          await driver.sleep(5000);
-        } catch {
-          hasNextPage = false;
-        }
+      postedAt = jsonLd.datePosted || null;
+      if (jsonLd.qualifications) {
+        reqQuals.push(jsonLd.qualifications);
       }
     }
 
-    console.log(`Scraped ${results.length} jobs from NaukriGulf`);
+    // Fall back to DOM selectors for anything missing
+    if (!title) {
+      title = await page
+        .locator("h1.info-position")
+        .first()
+        .textContent()
+        .then((t) => t.split("\n")[0].trim())
+        .catch(() => null);
+    }
+
+    if (company === "Not Mentioned") {
+      company = await page
+        .locator("p.info-org")
+        .first()
+        .textContent()
+        .then((t) => t.trim())
+        .catch(() => "Not Mentioned");
+    }
+
+    // Extract candidate requirements from DOM
+    const requirements = {};
+    const blocks = await page.locator(".candidate-profile .col").all();
+    for (const block of blocks) {
+      try {
+        const head = await block.locator(".head").textContent();
+        const value = await block.locator(".value").textContent();
+        requirements[head.toLowerCase().replace(/\s+/g, "_")] = value.trim();
+      } catch {
+        // skip malformed blocks
+      }
+    }
+
+    if (!location) {
+      location = requirements.location || null;
+    }
+    if (!salaryStr && requirements.salary) {
+      salaryStr = requirements.salary;
+    }
+    if (!experienceStr && requirements.experience) {
+      experienceStr = requirements.experience;
+    }
+    if (!jobTypeStr) {
+      jobTypeStr =
+        requirements.job_type || requirements.employment_type || null;
+    }
+    if (requirements.education) {
+      reqQuals.push(requirements.education);
+    }
+
+    // Full description HTML from DOM if not from JSON-LD
+    if (!descriptionHtml) {
+      descriptionHtml = await page
+        .locator("article.job-description")
+        .first()
+        .innerHTML()
+        .catch(() => "");
+    }
+
+    // Company website from external application link
+    if (!companyWebsite) {
+      companyWebsite = await page
+        .locator(".jd-company-desc a.anchor.ng-link")
+        .first()
+        .getAttribute("href", { timeout: 5000 })
+        .then((href) => {
+          try {
+            return new URL(href).origin;
+          } catch {
+            return null;
+          }
+        })
+        .catch(() => null);
+    }
+
+    const salary = parseSalary(salaryStr);
+    const urlPath = url.split("/").filter(Boolean).pop() || url;
+
+    return {
+      title,
+      source_url: url,
+      description: descriptionHtml,
+      posted_at: postedAt,
+      external_job_id: urlPath,
+      external_source: "NaukriGulf",
+      source_type: "SCRAPER",
+      source_base_url: BASE_URL,
+      is_remote: false,
+      location,
+      country_code: "AE",
+      job_type: mapJobType(jobTypeStr),
+      experience_level: parseExperienceToLevel(experienceStr),
+      salary_min: salary.min,
+      salary_max: salary.max,
+      salary_currency: salary.currency,
+      required_qualifications: reqQuals,
+      categories: [],
+      company: {
+        name: company,
+        website: companyWebsite,
+        location,
+        country_code: "AE",
+      },
+    };
+  } finally {
+    await page.close();
+  }
+}
+
+async function scrapeNaukriGulf() {
+  const browser = await chromium.launch({
+    headless: true,
+    args: [
+      "--disable-blink-features=AutomationControlled",
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+    ],
+  });
+
+  try {
+    const context = await browser.newContext({
+      userAgent: USER_AGENT,
+      viewport: { width: 1920, height: 1080 },
+    });
+
+    const listingPage = await context.newPage();
+    const allJobUrls = [];
+    let currentUrl = START_URL;
+
+    // Pagination: collect job URLs from listing pages
+    while (currentUrl && allJobUrls.length < MAX_JOBS) {
+      await listingPage.goto(currentUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 30000,
+      });
+      await listingPage.waitForTimeout(3000);
+
+      // Wait for job cards
+      try {
+        await listingPage.waitForSelector(".ng-box.srp-tuple", {
+          timeout: 10000,
+        });
+      } catch {
+        console.warn(
+          `NaukriGulf: No job cards found on ${currentUrl}, stopping pagination`
+        );
+        break;
+      }
+
+      // Extract job URLs from this page
+      const pageUrls = await listingPage.evaluate(() => {
+        const cards = document.querySelectorAll(".ng-box.srp-tuple");
+        const urls = [];
+        for (const card of cards) {
+          // Skip easy-apply jobs
+          const easyApply = card.querySelector(
+            "span:not([class])"
+          );
+          if (easyApply && easyApply.textContent.includes("Easy Apply")) {
+            continue;
+          }
+          const link = card.querySelector("a.info-position");
+          if (link?.href) {
+            urls.push(link.href);
+          }
+        }
+        return urls;
+      });
+
+      for (const u of pageUrls) {
+        if (allJobUrls.length >= MAX_JOBS) break;
+        if (!allJobUrls.includes(u)) {
+          allJobUrls.push(u);
+        }
+      }
+
+      console.log(
+        `NaukriGulf: Collected ${allJobUrls.length} job URLs so far`
+      );
+
+      // Follow "Next" link
+      currentUrl = await listingPage
+        .locator("a[aria-label='Next']")
+        .first()
+        .getAttribute("href", { timeout: 5000 })
+        .then((href) => {
+          if (!href) return null;
+          return href.startsWith("http") ? href : `${BASE_URL}${href}`;
+        })
+        .catch(() => null);
+    }
+
+    await listingPage.close();
+    console.log(
+      `NaukriGulf: Total job URLs to scrape: ${allJobUrls.length}`
+    );
+
+    // Scrape detail pages in batches
+    const results = [];
+    for (let i = 0; i < allJobUrls.length; i += BATCH_SIZE) {
+      const batch = allJobUrls.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(allJobUrls.length / BATCH_SIZE);
+      console.log(
+        `NaukriGulf: Processing batch ${batchNum}/${totalBatches} (${batch.length} jobs)`
+      );
+
+      const batchResults = await Promise.allSettled(
+        batch.map((url) => scrapeDetailPage(context, url))
+      );
+
+      for (let j = 0; j < batchResults.length; j++) {
+        const result = batchResults[j];
+        if (result.status === "fulfilled" && result.value?.title) {
+          results.push(result.value);
+        } else if (result.status === "rejected") {
+          console.warn(
+            `NaukriGulf: Failed to scrape ${batch[j]}: ${result.reason?.message || result.reason}`
+          );
+        } else {
+          console.warn(
+            `NaukriGulf: No title extracted for ${batch[j]}, skipping`
+          );
+        }
+      }
+
+      // Delay between batches to avoid rate limiting
+      if (i + BATCH_SIZE < allJobUrls.length) {
+        await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+      }
+    }
+
+    console.log(`NaukriGulf: Scraped ${results.length} jobs total`);
     return results;
   } finally {
-    await driver.quit();
+    await browser.close();
   }
 }
 

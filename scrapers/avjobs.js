@@ -1,6 +1,7 @@
 const axios = require("axios");
 const xml2js = require("xml2js");
 const cheerio = require("cheerio");
+const { parseCountryCode } = require("../lib/descriptionParser");
 
 const FEED_URL =
   "https://www.avjobs.com/special/RSS/rss_public_mgt_eng.asp";
@@ -83,6 +84,9 @@ function parseDetailPage($) {
         const addr = loc.address;
         const parts = [addr.addressLocality, addr.addressRegion, addr.addressCountry].filter(Boolean);
         if (parts.length) result.location = parts.join(", ");
+        if (addr.addressCountry) {
+          result.country_code = addr.addressCountry;
+        }
       }
     }
     if (jsonLd.datePosted) {
@@ -236,6 +240,7 @@ async function scrapeAVJobs() {
       job.salary_currency = detail.salary_currency;
     }
     if (detail?.expires_at) job.expires_at = detail.expires_at;
+    job.country_code = detail?.country_code || parseCountryCode(location) || null;
 
     return job;
   });

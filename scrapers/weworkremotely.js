@@ -2,9 +2,14 @@ const axios = require("axios");
 const xml2js = require("xml2js");
 const cheerio = require("cheerio");
 const { chromium } = require("playwright");
+const { parseCountryCode } = require("../lib/descriptionParser");
 
-const FEED_URL =
-  "https://weworkremotely.com/categories/remote-full-stack-programming-jobs.rss";
+const FEED_URLS = [
+  "https://weworkremotely.com/categories/remote-full-stack-programming-jobs.rss",
+  "https://weworkremotely.com/categories/remote-back-end-programming-jobs.rss",
+  "https://weworkremotely.com/categories/remote-front-end-programming-jobs.rss",
+  "https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss",
+];
 
 const DETAIL_BATCH_SIZE = 5;
 const DETAIL_PAGE_TIMEOUT = 15000;
@@ -58,11 +63,89 @@ async function fetchDetailPage(context, url) {
         if (website) result.company_website = website.href;
       }
 
+      // Company description
+      const companyDescEl = document.querySelector(".company-card p, .company-description, .company-bio");
+      if (companyDescEl) {
+        result.company_description = companyDescEl.innerText.trim();
+      }
+
       // Region/location from listing meta
       const regionEl = document.querySelector(".region, .location");
       if (regionEl) {
+        result.region = regionEl.innerText.trim();
         result.location = regionEl.innerText.trim();
       }
+
+      // Also check listing header for region info
+      if (!result.region) {
+        const headerEl = document.querySelector(".listing-header-container");
+        if (headerEl) {
+          const regionInHeader = headerEl.querySelector(".region, .location, [class*='region'], [class*='location']");
+          if (regionInHeader) {
+            result.region = regionInHeader.innerText.trim();
+            result.location = regionInHeader.innerText.trim();
+          }
+        }
+      }
+
+      // Skills extraction from tag/skill elements
+      const skillEls = document.querySelectorAll("[class*='skill'], [class*='tag'], .listing-tag, .tag");
+      const skillSet = new Set();
+      skillEls.forEach((el) => {
+        const t = el.innerText.trim();
+        if (t && t.length < 50) skillSet.add(t);
+      });
+
+      // Also extract tech keywords from description text
+      const techKeywords = [
+        'JavaScript', 'TypeScript', 'Python', 'Java', 'Golang', 'Go', 'Ruby', 'Rust',
+        'C\\+\\+', 'C#', '\\.NET', 'PHP', 'Swift', 'Kotlin', 'Scala', 'Elixir',
+        'React', 'Angular', 'Vue', 'Svelte', 'Next\\.js', 'Nuxt', 'Node\\.js', 'Express',
+        'Django', 'Flask', 'FastAPI', 'Rails', 'Spring', 'Laravel',
+        'AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'Terraform', 'Ansible',
+        'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Elasticsearch', 'DynamoDB',
+        'GraphQL', 'REST API', 'gRPC', 'Kafka', 'RabbitMQ',
+        'Machine Learning', 'Deep Learning', 'PyTorch', 'TensorFlow',
+        'HTML', 'CSS', 'Sass', 'Tailwind', 'Webpack', 'Vite',
+        'Git', 'CI/CD', 'Jenkins', 'GitHub Actions',
+        'Linux', 'SQL', 'NoSQL', 'Figma', 'Agile', 'Scrum',
+        'Solidity', 'Web3', 'Blockchain',
+      ];
+      const techRegex = new RegExp('\\b(' + techKeywords.join('|') + ')\\b', 'gi');
+      const techMatches = text.match(techRegex) || [];
+      techMatches.forEach((m) => skillSet.add(m));
+      result.skills = [...skillSet];
+
+      // Requirements extraction: find <ul> lists after headings with requirement-like text
+      const requirements = [];
+      const headings = document.querySelectorAll("h1, h2, h3, h4, h5, h6, strong, b");
+      const reqPattern = /requirement|qualification|looking for|must have|what you.ll need|who you are/i;
+      headings.forEach((heading) => {
+        if (!reqPattern.test(heading.innerText)) return;
+        let next = heading.tagName.match(/^(STRONG|B)$/i) ? heading.parentElement?.nextElementSibling : heading.nextElementSibling;
+        let attempts = 0;
+        while (next && attempts < 5) {
+          if (next.tagName === "UL" || next.tagName === "OL") {
+            next.querySelectorAll("li").forEach((li) => {
+              const t = li.innerText.trim();
+              if (t) requirements.push(t);
+            });
+            break;
+          }
+          if (/^H[1-6]$/.test(next.tagName)) break;
+          const nestedList = next.querySelector("ul, ol");
+          if (nestedList) {
+            nestedList.querySelectorAll("li").forEach((li) => {
+              const t = li.innerText.trim();
+              if (t) requirements.push(t);
+            });
+            break;
+          }
+          next = next.nextElementSibling;
+          attempts++;
+        }
+      });
+      result.requirements = requirements;
 
       return result;
     });
@@ -76,19 +159,52 @@ async function fetchDetailPage(context, url) {
   }
 }
 
+function resolveLocation(regionText) {
+  if (!regionText) return "Remote";
+  const r = regionText.toLowerCase().trim();
+  if (/anywhere in the world/i.test(r) || /worldwide/i.test(r) || /global/i.test(r)) return "Remote (Worldwide)";
+  if (/\bus only\b/i.test(r) || r === "us" || r === "usa") return "Remote (US)";
+  if (/\beurope only\b/i.test(r) || /\beu only\b/i.test(r)) return "Remote (Europe)";
+  if (/\buk only\b/i.test(r)) return "Remote (UK)";
+  if (/\bcanada only\b/i.test(r)) return "Remote (Canada)";
+  if (/\blatam\b/i.test(r) || /latin america/i.test(r)) return "Remote (LATAM)";
+  if (/\bapac\b/i.test(r) || /asia.pacific/i.test(r)) return "Remote (APAC)";
+  return regionText.trim();
+}
+
 async function scrapeWeWorkRemotely() {
-  // Step 1: Fetch RSS feed (no browser needed)
-  const response = await axios.get(FEED_URL, {
-    timeout: 15000,
-    headers: { "User-Agent": "Mozilla/5.0" },
-  });
-
+  // Step 1: Fetch all RSS feeds (no browser needed)
   const parser = new xml2js.Parser({ explicitArray: false });
-  const parsed = await parser.parseStringPromise(response.data);
-  const items = parsed.rss.channel.item;
-  const rssItems = Array.isArray(items) ? items : [items];
+  const seenLinks = new Set();
+  const allRssItems = [];
 
-  console.log(`Fetched ${rssItems.length} RSS items from WeWorkRemotely, fetching detail pages...`);
+  for (const feedUrl of FEED_URLS) {
+    try {
+      const response = await axios.get(feedUrl, {
+        timeout: 15000,
+        headers: { "User-Agent": "Mozilla/5.0" },
+      });
+      const parsed = await parser.parseStringPromise(response.data);
+      const items = parsed.rss.channel.item;
+      const feedItems = Array.isArray(items) ? items : items ? [items] : [];
+
+      let added = 0;
+      for (const item of feedItems) {
+        const urlPath = (item.link || "").split("/").filter(Boolean).pop() || item.link;
+        if (!seenLinks.has(urlPath)) {
+          seenLinks.add(urlPath);
+          allRssItems.push(item);
+          added++;
+        }
+      }
+      console.log(`  Feed ${feedUrl.split("/").pop()}: ${feedItems.length} items (${added} new, ${feedItems.length - added} duplicates)`);
+    } catch (err) {
+      console.warn(`  Failed to fetch feed ${feedUrl}: ${err.message}`);
+    }
+  }
+
+  const rssItems = allRssItems;
+  console.log(`Fetched ${rssItems.length} unique RSS items from WeWorkRemotely, fetching detail pages...`);
 
   // Step 2: Launch Playwright for detail pages
   const browser = await chromium.launch({ headless: true });
@@ -148,10 +264,36 @@ async function scrapeWeWorkRemotely() {
           companyWebsite = href;
         }
       });
+      // First link in RSS description is often the company website
+      if (!companyWebsite) {
+        const firstLink = $("a").first().attr("href") || "";
+        if (firstLink.startsWith("http") && !firstLink.includes("weworkremotely.com")) {
+          companyWebsite = firstLink;
+        }
+      }
+      // Use RSS state field for company location
+      const rssState = item.state || null;
 
       // Use detail page data when available, fall back to RSS
       const description = detail?.description || item.description;
-      const location = detail?.location || companyLocation || "Remote";
+      const regionText = detail?.region || detail?.location || item.region || null;
+      const location = resolveLocation(regionText) || companyLocation || "Remote";
+      const country_code = parseCountryCode(item.country || regionText || companyLocation) || null;
+
+      // Job type from RSS field or detail page
+      const rssType = item.type || null;
+      let job_type = null;
+      if (rssType) {
+        const t = rssType.toLowerCase();
+        if (t.includes("full")) job_type = "FULL_TIME";
+        else if (t.includes("part")) job_type = "PART_TIME";
+        else if (t.includes("contract")) job_type = "CONTRACT";
+        else if (t.includes("freelance")) job_type = "FREELANCE";
+      }
+
+      // Skills from RSS field, supplemented by detail page
+      const rssSkills = item.skills ? item.skills.split(/,\s*and\s*|,\s*|\s+and\s+/).map(s => s.trim()).filter(Boolean) : [];
+      const combinedSkills = [...new Set([...rssSkills, ...(detail?.skills || [])])];
 
       // Salary: prefer detail page, fall back to RSS parsing
       let salary_min = detail?.salary_min || null;
@@ -180,14 +322,19 @@ async function scrapeWeWorkRemotely() {
         source_base_url: "https://weworkremotely.com",
         is_remote: true,
         location,
+        country_code,
         salary_min,
         salary_max,
         salary_currency,
+        job_type,
+        skills: combinedSkills.length > 0 ? combinedSkills : [],
+        requirements: detail?.requirements || [],
         company: {
           name: companyName,
           logo_url: detail?.company_logo || rssLogoImg,
           website: detail?.company_website || companyWebsite,
-          location: companyLocation,
+          location: companyLocation || rssState || null,
+          description: detail?.company_description || null,
         },
         categories: [],
       };
@@ -220,6 +367,7 @@ async function scrapeWeWorkRemotely() {
         source_base_url: "https://weworkremotely.com",
         is_remote: true,
         location: "Remote",
+        country_code: null,
         company: { name: companyName },
         categories: [],
       };

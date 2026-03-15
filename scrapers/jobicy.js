@@ -1,6 +1,7 @@
 const axios = require("axios");
 const xml2js = require("xml2js");
 const { chromium } = require("playwright");
+const { parseCountryCode } = require("../lib/descriptionParser");
 
 const FEED_URL = "https://jobicy.com/feed/job_feed";
 
@@ -32,6 +33,32 @@ async function fetchDetailPage(context, url) {
     const detail = await page.evaluate(() => {
       const result = {};
 
+      // Try JSON-LD first
+      const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
+      for (const script of jsonLdScripts) {
+        try {
+          const data = JSON.parse(script.textContent);
+          const items = Array.isArray(data) ? data : [data];
+          for (const item of items) {
+            const posting = item['@type'] === 'JobPosting' ? item : item['@graph']?.find(g => g['@type'] === 'JobPosting');
+            if (posting) {
+              if (posting.baseSalary?.value) {
+                const val = posting.baseSalary.value;
+                result.salary_min = val.minValue || val.value || null;
+                result.salary_max = val.maxValue || val.value || null;
+                result.salary_currency = posting.baseSalary.currency || 'USD';
+              }
+              if (posting.datePosted) result.posted_at = posting.datePosted;
+              if (posting.jobLocation) {
+                const loc = Array.isArray(posting.jobLocation) ? posting.jobLocation[0] : posting.jobLocation;
+                if (loc?.address?.addressCountry) result.country = loc.address.addressCountry;
+              }
+              break;
+            }
+          }
+        } catch {}
+      }
+
       // Company logo from the detail page (bypasses hotlink protection)
       const logoImg = document.querySelector(".company-logo img, .job-header img, img[class*='logo']");
       if (logoImg && logoImg.src) {
@@ -56,6 +83,39 @@ async function fetchDetailPage(context, url) {
           result.salary_min = parseInt(eurMatch[1].replace(/,/g, ""), 10);
           result.salary_max = parseInt(eurMatch[2].replace(/,/g, ""), 10);
           result.salary_currency = "EUR";
+        }
+      }
+
+      // Fallback: search body text for salary patterns if not yet found
+      if (!result.salary_min) {
+        const bodyText = document.body.innerText || "";
+
+        // USD pattern: $60,000 - $80,000
+        const usdMatch = bodyText.match(/\$\s?([\d,]+)\s*[-–—to]+\s*\$?\s*([\d,]+)/);
+        if (usdMatch) {
+          result.salary_min = parseInt(usdMatch[1].replace(/,/g, ""), 10);
+          result.salary_max = parseInt(usdMatch[2].replace(/,/g, ""), 10);
+          result.salary_currency = "USD";
+        }
+
+        // EUR pattern: €50,000 - €70,000
+        if (!result.salary_min) {
+          const eurBodyMatch = bodyText.match(/€\s?([\d,]+)\s*[-–—to]+\s*€?\s*([\d,]+)/);
+          if (eurBodyMatch) {
+            result.salary_min = parseInt(eurBodyMatch[1].replace(/,/g, ""), 10);
+            result.salary_max = parseInt(eurBodyMatch[2].replace(/,/g, ""), 10);
+            result.salary_currency = "EUR";
+          }
+        }
+
+        // K-format: 50K-70K EUR or 60K-80K USD
+        if (!result.salary_min) {
+          const kMatch = bodyText.match(/([\d]+)\s*K\s*[-–—to]+\s*([\d]+)\s*K\s*(EUR|USD)/i);
+          if (kMatch) {
+            result.salary_min = parseInt(kMatch[1], 10) * 1000;
+            result.salary_max = parseInt(kMatch[2], 10) * 1000;
+            result.salary_currency = kMatch[3].toUpperCase();
+          }
         }
       }
 
@@ -175,6 +235,32 @@ async function scrapeJobicy() {
         job.salary_currency = detail.salary_currency;
       }
 
+      // Fallback: try RSS job_listing:salary field
+      if (!job.salary_min && item["job_listing:salary"]) {
+        const rssSalary = item["job_listing:salary"];
+        const usdMatch = rssSalary.match(/\$\s?([\d,]+)\s*[-–—to]+\s*\$?\s*([\d,]+)/);
+        if (usdMatch) {
+          job.salary_min = parseInt(usdMatch[1].replace(/,/g, ""), 10);
+          job.salary_max = parseInt(usdMatch[2].replace(/,/g, ""), 10);
+          job.salary_currency = "USD";
+        } else {
+          const eurMatch = rssSalary.match(/€\s?([\d,]+)\s*[-–—to]+\s*€?\s*([\d,]+)/);
+          if (eurMatch) {
+            job.salary_min = parseInt(eurMatch[1].replace(/,/g, ""), 10);
+            job.salary_max = parseInt(eurMatch[2].replace(/,/g, ""), 10);
+            job.salary_currency = "EUR";
+          }
+        }
+      }
+
+      // Override posted_at from JSON-LD if available
+      if (detail?.posted_at) {
+        job.posted_at = detail.posted_at;
+      }
+
+      // Parse country code from location
+      job.country_code = parseCountryCode(detail?.country || detail?.location || item["job_listing:location"]) || null;
+
       return job;
     });
 
@@ -208,6 +294,7 @@ async function scrapeJobicy() {
         job_type: mapJobType(item["job_listing:job_type"]),
         categories,
         company: companyName ? { name: companyName, logo_url: logoUrl } : null,
+        country_code: parseCountryCode(item["job_listing:location"]) || null,
       };
     });
   } finally {

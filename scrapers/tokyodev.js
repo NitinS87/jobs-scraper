@@ -30,10 +30,53 @@ async function fetchDetailPage(context, url) {
       // Extract structured data from the page
       const text = document.body.innerText;
 
-      // Salary info
-      const salaryMatch = text.match(/(?:Salary|Compensation|Pay)[:\s]*([¥$€]\s?[\d,]+(?:\s*[-–—to]+\s*[¥$€]?\s*[\d,]+)?)/i);
-      if (salaryMatch) {
-        result.salary_text = salaryMatch[1].trim();
+      // Salary info — check dedicated sections first, then regex patterns
+      const salarySection = document.querySelector(
+        "[class*='salary'], [class*='compensation'], " +
+        "dt:has(+ dd):where(:is([class*='salary'], [class*='comp']))"
+      );
+      // Also look for dt/dd pairs with salary/compensation labels
+      const dtElements = document.querySelectorAll("dt");
+      let salaryDdText = null;
+      for (const dt of dtElements) {
+        const dtText = dt.innerText.trim().toLowerCase();
+        if (dtText.includes("salary") || dtText.includes("compensation") || dtText.includes("pay")) {
+          const dd = dt.nextElementSibling;
+          if (dd && dd.tagName === "DD") {
+            salaryDdText = dd.innerText.trim();
+            break;
+          }
+        }
+      }
+
+      if (salarySection) {
+        result.salary_text = salarySection.innerText.trim();
+      } else if (salaryDdText) {
+        result.salary_text = salaryDdText;
+      } else {
+        // Try multiple salary patterns
+        const salaryPatterns = [
+          // ¥7,000,000 - ¥15,000,000
+          /[¥￥]\s?[\d,]+(?:\s*[-–—~to]+\s*[¥￥]?\s*[\d,]+)/,
+          // 7M - 15M JPY or ¥7M-15M
+          /[¥￥]?\s?\d+(?:\.\d+)?M\s*[-–—~to]+\s*[¥￥]?\s?\d+(?:\.\d+)?M(?:\s*JPY)?/i,
+          // 7,000,000 - 15,000,000 JPY
+          /[\d,]+\s*[-–—~to]+\s*[\d,]+\s*JPY/i,
+          // Patterns with 万 (man/10k) units: 700万 - 1500万
+          /[\d,]+万\s*[-–—~to円]+\s*[\d,]+万(?:\s*円)?/,
+          // Generic salary/compensation line with currency
+          /(?:Salary|Compensation|Pay)[:\s]*([¥$€￥]\s?[\d,]+(?:\s*[-–—~to]+\s*[¥$€￥]?\s*[\d,]+)?(?:\s*(?:JPY|USD|EUR))?)/i,
+          // Standalone JPY amounts
+          /(?:JPY|¥|￥)\s?[\d,]+(?:k|K)?(?:\s*[-–—~to]+\s*(?:JPY|¥|￥)?\s?[\d,]+(?:k|K)?)?/,
+        ];
+
+        for (const pattern of salaryPatterns) {
+          const match = text.match(pattern);
+          if (match) {
+            result.salary_text = (match[1] || match[0]).trim();
+            break;
+          }
+        }
       }
 
       // Visa sponsorship
@@ -41,16 +84,134 @@ async function fetchDetailPage(context, url) {
         result.visa_sponsorship = true;
       }
 
-      // Job type
-      if (/\bfull[- ]?time\b/i.test(text)) result.job_type = "FULL_TIME";
-      else if (/\bpart[- ]?time\b/i.test(text)) result.job_type = "PART_TIME";
-      else if (/\bcontract\b/i.test(text)) result.job_type = "CONTRACT";
+      // Job type — check JSON-LD first, then structured metadata, then text
+      try {
+        const ldScripts = document.querySelectorAll('script[type="application/ld+json"]');
+        for (const script of ldScripts) {
+          const data = JSON.parse(script.textContent);
+          const items = Array.isArray(data) ? data : [data];
+          for (const item of items) {
+            if (item["@type"] === "JobPosting" && item.employmentType) {
+              const empType = Array.isArray(item.employmentType) ? item.employmentType[0] : item.employmentType;
+              const normalized = empType.toUpperCase().replace(/[-\s]+/g, "_");
+              if (["FULL_TIME", "PART_TIME", "CONTRACT", "TEMPORARY", "INTERNSHIP"].includes(normalized)) {
+                result.job_type = normalized;
+              }
+            }
+          }
+        }
+      } catch (_) { /* ignore JSON parse errors */ }
 
-      // Posted date
+      // Check structured dt/dd metadata for job type
+      if (!result.job_type) {
+        for (const dt of dtElements) {
+          const dtText = dt.innerText.trim().toLowerCase();
+          if (dtText.includes("type") || dtText.includes("employment")) {
+            const dd = dt.nextElementSibling;
+            if (dd && dd.tagName === "DD") {
+              const ddText = dd.innerText.trim().toLowerCase();
+              if (/\bfull[- ]?time\b/.test(ddText)) result.job_type = "FULL_TIME";
+              else if (/\bpart[- ]?time\b/.test(ddText)) result.job_type = "PART_TIME";
+              else if (/\bcontract\b/.test(ddText)) result.job_type = "CONTRACT";
+              break;
+            }
+          }
+        }
+      }
+
+      // Fallback: text-based detection
+      if (!result.job_type) {
+        if (/\bfull[- ]?time\b/i.test(text)) result.job_type = "FULL_TIME";
+        else if (/\bpart[- ]?time\b/i.test(text)) result.job_type = "PART_TIME";
+        else if (/\bcontract\b/i.test(text)) result.job_type = "CONTRACT";
+      }
+
+      // Posted date — try multiple sources in priority order
       const dateEl = document.querySelector("time[datetime]");
       if (dateEl) {
         result.posted_at = dateEl.getAttribute("datetime");
       }
+
+      if (!result.posted_at) {
+        const metaDate = document.querySelector('meta[property="article:published_time"]');
+        if (metaDate) {
+          result.posted_at = metaDate.getAttribute("content");
+        }
+      }
+
+      if (!result.posted_at) {
+        try {
+          const ldScripts = document.querySelectorAll('script[type="application/ld+json"]');
+          for (const script of ldScripts) {
+            const data = JSON.parse(script.textContent);
+            const items = Array.isArray(data) ? data : [data];
+            for (const item of items) {
+              if (item["@type"] === "JobPosting" && item.datePosted) {
+                result.posted_at = item.datePosted;
+                break;
+              }
+            }
+            if (result.posted_at) break;
+          }
+        } catch (_) { /* ignore JSON parse errors */ }
+      }
+
+      if (!result.posted_at) {
+        const postedMatch = text.match(/Posted\s+(?:on\s+)?(\w+\s+\d{1,2},?\s+\d{4}|\d{4}[-/]\d{2}[-/]\d{2})/i);
+        if (postedMatch) {
+          const parsed = new Date(postedMatch[1]);
+          if (!isNaN(parsed.getTime())) {
+            result.posted_at = parsed.toISOString();
+          }
+        }
+      }
+
+      // Company details — look for "About" section and company website
+      let companyDescription = null;
+      let companyWebsite = null;
+
+      // Find "About" or "About the company" sections
+      const headings = document.querySelectorAll("h2, h3, h4");
+      for (const heading of headings) {
+        const hText = heading.innerText.trim().toLowerCase();
+        if (hText.includes("about") && (hText.includes("company") || hText === "about" || hText.includes("about us"))) {
+          // Grab the text content following this heading until the next heading
+          let content = [];
+          let sibling = heading.nextElementSibling;
+          while (sibling && !["H2", "H3", "H4"].includes(sibling.tagName)) {
+            const t = sibling.innerText.trim();
+            if (t) content.push(t);
+            sibling = sibling.nextElementSibling;
+          }
+          if (content.length) {
+            companyDescription = content.join("\n").substring(0, 2000);
+          }
+          break;
+        }
+      }
+      if (companyDescription) result.company_description = companyDescription;
+
+      // Look for company website — external links not pointing to tokyodev.com
+      const allLinks = document.querySelectorAll("a[href]");
+      for (const link of allLinks) {
+        const href = link.getAttribute("href");
+        const linkText = link.innerText.trim().toLowerCase();
+        if (
+          href &&
+          href.startsWith("http") &&
+          !href.includes("tokyodev.com") &&
+          !href.includes("twitter.com") &&
+          !href.includes("linkedin.com") &&
+          !href.includes("github.com") &&
+          !href.includes("facebook.com") &&
+          (linkText.includes("website") || linkText.includes("homepage") || linkText.includes("company site") ||
+           link.closest("[class*='company']") || link.closest("[class*='about']"))
+        ) {
+          companyWebsite = href;
+          break;
+        }
+      }
+      if (companyWebsite) result.company_website = companyWebsite;
 
       // Tags/categories
       const tags = [];
@@ -115,6 +276,7 @@ async function scrapeTokyoDev() {
           let location = null;
           let is_remote = false;
 
+          let job_type = null;
           const tags = jobItem.querySelectorAll("a.tag");
           tags.forEach((tag) => {
             const text = tag.innerText.trim().toLowerCase();
@@ -122,6 +284,11 @@ async function scrapeTokyoDev() {
               location = tag.innerText.trim();
               is_remote = true;
             }
+            if (/\bfull[- ]?time\b/.test(text)) job_type = "FULL_TIME";
+            else if (/\bpart[- ]?time\b/.test(text)) job_type = "PART_TIME";
+            else if (/\bcontract\b/.test(text)) job_type = "CONTRACT";
+            else if (/\bfreelance\b/.test(text)) job_type = "CONTRACT";
+            else if (/\bintern\b/.test(text)) job_type = "INTERNSHIP";
           });
 
           results.push({
@@ -130,6 +297,7 @@ async function scrapeTokyoDev() {
             location,
             job_url,
             is_remote,
+            job_type,
           });
         });
       });
@@ -192,10 +360,14 @@ async function scrapeTokyoDev() {
         company: {
           name: job.company,
           country_code: "JP",
+          ...(detail?.company_description && { description: detail.company_description }),
+          ...(detail?.company_website && { website: detail.company_website }),
         },
       };
 
+      // Job type: prefer detail page (more specific), fall back to listing tag
       if (detail?.job_type) result.job_type = detail.job_type;
+      else if (job.job_type) result.job_type = job.job_type;
       if (detail?.visa_sponsorship) result.visa_sponsorship = true;
       if (detail?.salary_text) result.salary_text = detail.salary_text;
 

@@ -1,9 +1,15 @@
 const axios = require("axios");
 const xml2js = require("xml2js");
 const cheerio = require("cheerio");
+const { parseCountryCode } = require("../lib/descriptionParser");
 
-const FEED_URL =
-  "https://www.realworkfromanywhere.com/remote-developer-jobs/rss.xml";
+const FEED_URLS = [
+  "https://www.realworkfromanywhere.com/remote-developer-jobs/rss.xml",
+  "https://www.realworkfromanywhere.com/remote-design-jobs/rss.xml",
+  "https://www.realworkfromanywhere.com/remote-marketing-jobs/rss.xml",
+  "https://www.realworkfromanywhere.com/remote-data-jobs/rss.xml",
+  "https://www.realworkfromanywhere.com/remote-devops-jobs/rss.xml",
+];
 
 const DETAIL_FETCH_DELAY = 500;
 const DETAIL_FETCH_TIMEOUT = 10000;
@@ -90,6 +96,28 @@ async function fetchDetailPage(url) {
         const parts = [addr.addressLocality, addr.addressRegion, addr.addressCountry].filter(Boolean);
         if (parts.length) result.location = parts.join(", ");
       }
+      if (loc?.address?.addressCountry) {
+        result.country_code = loc.address.addressCountry;
+      }
+    }
+
+    // If no country from jobLocation, try applicantLocationRequirements
+    if (!result.country_code && jsonLd.applicantLocationRequirements) {
+      const reqs = Array.isArray(jsonLd.applicantLocationRequirements)
+        ? jsonLd.applicantLocationRequirements
+        : [jsonLd.applicantLocationRequirements];
+      // If only 1 country listed, use it; if many (>5), it's worldwide
+      const countries = reqs
+        .filter(r => r["@type"] === "Country")
+        .map(r => r.name)
+        .filter(Boolean);
+      if (countries.length === 1) {
+        result.country_code = countries[0]; // Usually an ISO code
+      } else if (countries.length > 0 && countries.length <= 5) {
+        // Few specific countries — use the first one
+        result.country_code = countries[0];
+      }
+      // If >5 countries, it's worldwide — leave null
     }
 
     // Salary from JSON-LD
@@ -132,27 +160,49 @@ async function processInBatches(items, batchSize, delayMs, fn) {
 }
 
 async function scrapeRealWorkFromAnywhere() {
-  const response = await axios.get(FEED_URL, {
-    timeout: 15000,
-    headers: { "User-Agent": "Mozilla/5.0" },
-  });
-
   const parser = new xml2js.Parser({
     explicitArray: true,
     strict: false,
     trim: true,
   });
 
-  const parsed = await parser.parseStringPromise(response.data);
-  const channel = parsed?.RSS?.CHANNEL?.[0];
-  const items = channel?.ITEM;
+  // Fetch all feeds, collecting items and deduplicating by link URL
+  const seenLinks = new Set();
+  const items = [];
 
-  if (!items || items.length === 0) {
-    console.log("No jobs found in RealWorkFromAnywhere feed");
+  for (const feedUrl of FEED_URLS) {
+    try {
+      const response = await axios.get(feedUrl, {
+        timeout: 15000,
+        headers: { "User-Agent": "Mozilla/5.0" },
+      });
+
+      const parsed = await parser.parseStringPromise(response.data);
+      const channel = parsed?.RSS?.CHANNEL?.[0];
+      const feedItems = channel?.ITEM || [];
+
+      let addedCount = 0;
+      for (const item of feedItems) {
+        const link = item.LINK?.[0] || "";
+        if (link && !seenLinks.has(link)) {
+          seenLinks.add(link);
+          items.push(item);
+          addedCount++;
+        }
+      }
+
+      console.log(`RWFA feed ${feedUrl.split("/").slice(-2, -1)[0]}: ${feedItems.length} items (${addedCount} new)`);
+    } catch (err) {
+      console.warn(`Failed to fetch RWFA feed ${feedUrl}: ${err.message}`);
+    }
+  }
+
+  if (items.length === 0) {
+    console.log("No jobs found in RealWorkFromAnywhere feeds");
     return [];
   }
 
-  console.log(`Fetched ${items.length} RSS items from RealWorkFromAnywhere, fetching detail pages...`);
+  console.log(`Fetched ${items.length} unique RSS items from RealWorkFromAnywhere, fetching detail pages...`);
 
   // Fetch detail pages for JSON-LD data
   const detailResults = await processInBatches(
@@ -227,6 +277,9 @@ async function scrapeRealWorkFromAnywhere() {
 
     // Add expiry date
     if (detail?.valid_through) job.expires_at = detail.valid_through;
+
+    // Add country code
+    job.country_code = parseCountryCode(detail?.country_code || detail?.location) || null;
 
     return job;
   });

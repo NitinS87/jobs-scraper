@@ -105,6 +105,31 @@ async function scrapeJobsInJapan() {
           description = jobOverview;
         }
 
+        // Extract posted date
+        let postedAt = null;
+        // Try time element
+        const timeText = await extractText(jobPage, 'time');
+        if (timeText) {
+          const d = new Date(timeText.trim());
+          if (!isNaN(d.getTime())) postedAt = d.toISOString();
+        }
+        // Try date class
+        if (!postedAt) {
+          const dateText = await extractText(jobPage, '.date, .post-date, .job-date');
+          if (dateText) {
+            const d = new Date(dateText.trim());
+            if (!isNaN(d.getTime())) postedAt = d.toISOString();
+          }
+        }
+        // Try text pattern in job details
+        if (!postedAt && jobOverview) {
+          const dateMatch = jobOverview.match(/(?:Posted|Date|Published)[:\s]*(\w+\s+\d{1,2},?\s+\d{4}|\d{4}[-/]\d{1,2}[-/]\d{1,2})/i);
+          if (dateMatch) {
+            const d = new Date(dateMatch[1].trim());
+            if (!isNaN(d.getTime())) postedAt = d.toISOString();
+          }
+        }
+
         // Extract company profile link
         const companyLink = await extractHref(
           jobPage,
@@ -125,7 +150,7 @@ async function scrapeJobsInJapan() {
           title: job.jobTitle,
           source_url: job.jobLink,
           description,
-          posted_at: null,
+          posted_at: postedAt,
           external_job_id: urlPath,
           external_source: "JobsInJapan",
           source_type: "SCRAPER",
