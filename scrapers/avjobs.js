@@ -5,15 +5,15 @@ const FEED_URL =
   "https://www.avjobs.com/special/RSS/rss_public_mgt_eng.asp";
 
 function parseLocationFromDesc(desc) {
-  // Pattern 1: "City, State Country - " at start
-  const match = desc.match(/^\s*\r?\n?\s*(.+?(?:United States|United Kingdom|Canada|Australia|Estonia|Cayman Islands|[A-Z]{2}\s))\s*-/);
+  // Pattern 1: "City, State Country - " at start (may have leading comma for some entries)
+  const match = desc.match(/^\s*\r?\n?\s*,?\s*(.+?(?:United States|United Kingdom|Canada|Australia|Estonia|Cayman Islands|Germany|South Korea|Poland|France|Japan|India|[A-Z]{2}\s))\s*-/);
   if (match) {
-    return match[1].trim();
+    return match[1].trim().replace(/^,\s*/, '');
   }
-  // Pattern 2: "Location: City, State" or "City, ST" at very start
-  const match2 = desc.match(/^\s*\r?\n?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+)*,\s*[A-Z]{2}(?:\s+United States)?)\s*-/);
+  // Pattern 2: "City, ST" at very start
+  const match2 = desc.match(/^\s*\r?\n?\s*,?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+)*,\s*[A-Z][a-z]+(?:\s[A-Z][a-z]+)*(?:\s+[A-Z][a-z]+)*)\s*-/);
   if (match2) {
-    return match2[1].trim();
+    return match2[1].trim().replace(/^,\s*/, '');
   }
   return null;
 }

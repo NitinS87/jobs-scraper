@@ -90,16 +90,34 @@ async function scrapeJobsInJapan() {
         await randomDelay();
 
         // Extract description from detail page
-        const description = await extractHtml(
-          jobPage,
-          ".job-detail-description, .entry-content, .job-content"
-        );
+        let description = await extractHtml(jobPage, ".job-desc");
+        if (!description) {
+          description = await extractHtml(jobPage, ".noo-main");
+        }
+
+        // Extract job overview details
+        const jobOverview = await extractText(jobPage, ".job-details");
+
+        // Combine overview + description
+        if (jobOverview && description) {
+          description = jobOverview + "\n\n" + description;
+        } else if (jobOverview) {
+          description = jobOverview;
+        }
 
         // Extract company profile link
         const companyLink = await extractHref(
           jobPage,
           'a[href*="/companies/"]'
         );
+
+        // Extract company logo
+        const companyLogo = await (async () => {
+          try {
+            const el = await jobPage.$('.company-desc img, .noo-sidebar img');
+            return el ? await el.getAttribute('src') : null;
+          } catch { return null; }
+        })();
 
         const urlPath = job.jobLink.split("/").filter(Boolean).pop() || job.jobLink;
 
@@ -119,6 +137,7 @@ async function scrapeJobsInJapan() {
           company: {
             name: job.companyName || null,
             website: companyLink || null,
+            logo_url: companyLogo || null,
             country_code: "JP",
           },
         });
