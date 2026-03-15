@@ -4,6 +4,48 @@ const xml2js = require("xml2js");
 const FEED_URL =
   "https://www.avjobs.com/special/RSS/rss_public_mgt_eng.asp";
 
+function parseLocationFromDesc(desc) {
+  // Pattern 1: "City, State Country - " at start
+  const match = desc.match(/^\s*\r?\n?\s*(.+?(?:United States|United Kingdom|Canada|Australia|Estonia|Cayman Islands|[A-Z]{2}\s))\s*-/);
+  if (match) {
+    return match[1].trim();
+  }
+  // Pattern 2: "Location: City, State" or "City, ST" at very start
+  const match2 = desc.match(/^\s*\r?\n?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+)*,\s*[A-Z]{2}(?:\s+United States)?)\s*-/);
+  if (match2) {
+    return match2[1].trim();
+  }
+  return null;
+}
+
+function parseCompanyFromDesc(desc) {
+  // Pattern 1: "At Boeing, we..." or "At Company Name, ..."
+  const atMatch = desc.match(/\bAt\s+([A-Z][A-Za-z\s&.'-]+?),\s+we\b/);
+  if (atMatch) return atMatch[1].trim();
+
+  // Pattern 2: "Tactical Air Support Inc." — company name with Inc/LLC/Corp
+  const incMatch = desc.match(/\b([A-Z][A-Za-z\s&.'-]*?\s+(?:Inc\.?|LLC|Corp\.?|Ltd\.?|Co\.?))\b/);
+  if (incMatch) return incMatch[1].trim();
+
+  // Pattern 3: "Join our fantastic Menzies Aviation team" or "Menzies Aviation (MA)"
+  const joinMatch = desc.match(/(?:join|of)\s+(?:our\s+)?(?:fantastic\s+)?([A-Z][A-Za-z\s&.'-]+?)(?:\s+team|\s*\()/i);
+  if (joinMatch) return joinMatch[1].trim();
+
+  // Pattern 4: "People. Passion. Pride" + "global aviation" → Menzies Aviation
+  if (/People\.\s*Passion\.\s*Pride/i.test(desc) || /Menzies\s*Aviation/i.test(desc)) {
+    return "Menzies Aviation";
+  }
+
+  // Pattern 5: company name right after location dash, e.g. "- The Certifying Technician..."
+  // Check if there's a company name pattern elsewhere
+  const reportMatch = desc.match(/report to the\s+([A-Z][A-Za-z\s]+?)(?:\s+and\b|\s+at\b)/);
+  if (reportMatch) {
+    // Not a company, it's a role. Skip.
+  }
+
+  return null;
+}
+
 async function scrapeAVJobs() {
   const response = await axios.get(FEED_URL, {
     timeout: 15000,
@@ -18,22 +60,8 @@ async function scrapeAVJobs() {
     const urlPath = (item.link || "").split("/").filter(Boolean).pop() || item.link;
     const desc = item.description || "";
 
-    // AVJobs descriptions start with "City, State Country - Job Description At Company, ..."
-    // Parse location from beginning of description
-    let location = null;
-    let companyName = null;
-
-    // Pattern: "Oklahoma City, OK United States - Job Description At Boeing, ..."
-    const locMatch = desc.match(/^\s*(.+?)\s*-\s*Job Description/i);
-    if (locMatch) {
-      location = locMatch[1].trim();
-    }
-
-    // Parse company name: "At Boeing, we..." or "At Company Name, ..."
-    const companyMatch = desc.match(/(?:Job Description\s+)?At\s+([A-Z][^,]+),/);
-    if (companyMatch) {
-      companyName = companyMatch[1].trim();
-    }
+    const location = parseLocationFromDesc(desc);
+    const companyName = parseCompanyFromDesc(desc);
 
     return {
       title: item.title,
