@@ -68,17 +68,23 @@ async function scrapeTokyoDev() {
     const jobs = rawJobs.map((job) => {
       const urlPath = (job.job_url || "").split("/").filter(Boolean).pop() || job.job_url;
 
+      // Clean up location text
+      let location = job.location || "Japan";
+      if (location === "No remote") location = "Japan (On-site)";
+      else if (location === "Fully remote") location = "Japan (Remote)";
+      else if (location === "Partially remote") location = "Japan (Hybrid)";
+
       return {
         title: job.title,
         source_url: job.job_url,
-        description: "", // Could navigate to detail pages for richer data
+        description: `${job.title} at ${job.company}. Location: ${location}. View full details at ${job.job_url}`,
         posted_at: null,
         external_job_id: urlPath,
         external_source: "TokyoDev",
         source_type: "SCRAPER",
         source_base_url: "https://www.tokyodev.com",
         is_remote: job.is_remote,
-        location: job.location,
+        location,
         country_code: "JP",
         categories: [],
         company: {

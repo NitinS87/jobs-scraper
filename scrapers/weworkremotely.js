@@ -19,13 +19,22 @@ async function scrapeWeWorkRemotely() {
     const rawTitle = item.title || "";
     const companyFromCreator = item["dc:creator"] || null;
 
+    // WWR titles are formatted as "Company: Job Title" — parse company from title
+    let companyName = companyFromCreator;
+    let cleanTitle = rawTitle;
+    if (!companyName && rawTitle.includes(": ")) {
+      const colonIdx = rawTitle.indexOf(": ");
+      companyName = rawTitle.substring(0, colonIdx).trim();
+      cleanTitle = rawTitle.substring(colonIdx + 2).trim();
+    }
+
     // Parse HTML description for rich data
     const $ = cheerio.load(item.description || "");
 
-    // Company logo: first <img> tag (usually the WWR logo)
+    // Company logo: first <img> tag (WWR hosts logos on imgix)
     const logoImg = $("img").first().attr("src") || null;
 
-    // Company website: text after "Headquarters:" or "URL:"
+    // Parse structured data from description list items
     let companyWebsite = null;
     let companyLocation = null;
 
@@ -36,7 +45,7 @@ async function scrapeWeWorkRemotely() {
       }
     });
 
-    // Look for URL in the description
+    // Look for company website URL in the description
     $("a").each((_, a) => {
       const href = $(a).attr("href") || "";
       const text = $(a).text() || "";
@@ -59,7 +68,7 @@ async function scrapeWeWorkRemotely() {
     const urlPath = (item.link || "").split("/").filter(Boolean).pop() || item.link;
 
     return {
-      title: rawTitle,
+      title: cleanTitle,
       source_url: item.link,
       description: item.description,
       posted_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
@@ -68,11 +77,12 @@ async function scrapeWeWorkRemotely() {
       source_type: "RSS",
       source_base_url: "https://weworkremotely.com",
       is_remote: true,
+      location: companyLocation || "Remote",
       salary_min,
       salary_max,
       salary_currency,
       company: {
-        name: companyFromCreator,
+        name: companyName,
         logo_url: logoImg,
         website: companyWebsite,
         location: companyLocation,

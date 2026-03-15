@@ -40,8 +40,14 @@ async function scrapeRealWorkFromAnywhere() {
       companyName = atMatch[1].trim();
     }
 
+    // Clean the title — remove "at Company" suffix for the job title
+    let cleanTitle = title;
+    if (atMatch) {
+      cleanTitle = title.substring(0, title.lastIndexOf(" at ")).trim();
+    }
+
     return {
-      title,
+      title: cleanTitle || title,
       source_url: link,
       description,
       posted_at: pubDate ? new Date(pubDate).toISOString() : null,
@@ -50,6 +56,7 @@ async function scrapeRealWorkFromAnywhere() {
       source_type: "RSS",
       source_base_url: "https://www.realworkfromanywhere.com",
       is_remote: true,
+      location: "Remote",
       categories: [],
       company: companyName ? { name: companyName } : null,
     };
