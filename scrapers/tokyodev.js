@@ -1,11 +1,7 @@
-const fs = require("fs");
-const path = require("path");
 const { chromium } = require("playwright");
 
-(async () => {
-  const browser = await chromium.launch({
-    headless: true,
-  });
+async function scrapeTokyoDev() {
+  const browser = await chromium.launch({ headless: true });
 
   const context = await browser.newContext({
     userAgent:
@@ -16,8 +12,6 @@ const { chromium } = require("playwright");
   const page = await context.newPage();
 
   try {
-    console.log("Opening TokyoDev...");
-
     await page.goto("https://www.tokyodev.com/jobs", {
       waitUntil: "domcontentloaded",
       timeout: 60000,
@@ -25,16 +19,12 @@ const { chromium } = require("playwright");
 
     await page.waitForSelector("div.flex-1", { timeout: 60000 });
 
-    const jobs = await page.evaluate(() => {
+    const rawJobs = await page.evaluate(() => {
       const results = [];
-
-      // Each company block
       const companyBlocks = document.querySelectorAll("div.flex-1");
 
       companyBlocks.forEach((companyBlock) => {
-        const companyLink = companyBlock.querySelector(
-          "h3 a[href^='/companies/']"
-        );
+        const companyLink = companyBlock.querySelector("h3 a[href^='/companies/']");
         if (!companyLink) return;
 
         const company = companyLink.innerText.trim();
@@ -44,21 +34,21 @@ const { chromium } = require("playwright");
         );
 
         jobItems.forEach((jobItem) => {
-          const titleLink = jobItem.querySelector(
-            "a.font-bold[href*='/jobs/']"
-          );
+          const titleLink = jobItem.querySelector("a.font-bold[href*='/jobs/']");
           if (!titleLink) return;
 
           const title = titleLink.innerText.trim();
           const job_url = titleLink.href;
 
           let location = null;
+          let is_remote = false;
 
           const tags = jobItem.querySelectorAll("a.tag");
           tags.forEach((tag) => {
             const text = tag.innerText.trim().toLowerCase();
             if (text.includes("remote")) {
               location = tag.innerText.trim();
+              is_remote = true;
             }
           });
 
@@ -67,6 +57,7 @@ const { chromium } = require("playwright");
             company,
             location,
             job_url,
+            is_remote,
           });
         });
       });
@@ -74,14 +65,37 @@ const { chromium } = require("playwright");
       return results;
     });
 
-    const outputPath = path.join(__dirname, "tokyodev.json");
-    fs.writeFileSync(outputPath, JSON.stringify(jobs, null, 2));
+    const jobs = rawJobs.map((job) => {
+      const urlPath = (job.job_url || "").split("/").filter(Boolean).pop() || job.job_url;
 
-    console.log(`✅ Scraped ${jobs.length} jobs`);
-    console.log("Saved to tokyodev.json");
+      return {
+        title: job.title,
+        source_url: job.job_url,
+        description: "", // Could navigate to detail pages for richer data
+        posted_at: null,
+        external_job_id: urlPath,
+        external_source: "TokyoDev",
+        source_type: "SCRAPER",
+        source_base_url: "https://www.tokyodev.com",
+        is_remote: job.is_remote,
+        location: job.location,
+        country_code: "JP",
+        categories: [],
+        company: {
+          name: job.company,
+          country_code: "JP",
+        },
+      };
+    });
+
+    console.log(`Scraped ${jobs.length} jobs from TokyoDev`);
+    return jobs;
   } catch (err) {
-    console.error("❌ Error:", err.message);
+    console.error("Error scraping TokyoDev:", err.message);
+    return [];
   } finally {
     await browser.close();
   }
-})();
+}
+
+module.exports = scrapeTokyoDev;

@@ -1,8 +1,41 @@
 const { Builder, By, until } = require("selenium-webdriver");
 const chrome = require("selenium-webdriver/chrome");
-const fs = require("fs");
 
-async function naukrigulfJobsScraper() {
+function parseExperienceToLevel(expStr) {
+  if (!expStr) return null;
+  const match = expStr.match(/(\d+)/);
+  if (!match) return null;
+  const years = parseInt(match[1], 10);
+  if (years <= 2) return "ENTRY";
+  if (years <= 5) return "MID";
+  if (years <= 10) return "SENIOR";
+  return "EXECUTIVE";
+}
+
+function parseSalary(salaryStr) {
+  if (!salaryStr) return { min: null, max: null, currency: null };
+  // Pattern: "AED 8,000 - 12,000" or "8000 - 12000 AED"
+  const match = salaryStr.match(/(AED|USD|EUR)?\s*([\d,]+)\s*[-–—to]+\s*([\d,]+)\s*(AED|USD|EUR)?/i);
+  if (!match) return { min: null, max: null, currency: null };
+  return {
+    min: parseInt(match[2].replace(/,/g, ""), 10),
+    max: parseInt(match[3].replace(/,/g, ""), 10),
+    currency: (match[1] || match[4] || "AED").toUpperCase(),
+  };
+}
+
+function mapJobType(typeStr) {
+  if (!typeStr) return null;
+  const lower = typeStr.toLowerCase();
+  if (lower.includes("full")) return "FULL_TIME";
+  if (lower.includes("part")) return "PART_TIME";
+  if (lower.includes("contract")) return "CONTRACT";
+  if (lower.includes("intern")) return "INTERNSHIP";
+  if (lower.includes("freelance")) return "FREELANCE";
+  return null;
+}
+
+async function scrapeNaukriGulf() {
   const options = new chrome.Options();
   options.addArguments("--window-size=1920,1080");
   options.addArguments("--disable-blink-features=AutomationControlled");
@@ -16,7 +49,7 @@ async function naukrigulfJobsScraper() {
     .setChromeOptions(options)
     .build();
 
-  const jobsData = [];
+  const results = [];
   let jobsCollected = 0;
 
   try {
@@ -39,13 +72,11 @@ async function naukrigulfJobsScraper() {
         if (jobsCollected >= 15) break;
 
         try {
-          // Skip Easy Apply jobs
           const easyApplyElements = await job.findElements(
             By.xpath(".//span[contains(text(),'Easy Apply')]")
           );
           if (easyApplyElements.length > 0) continue;
 
-          // Open job detail page
           const mainLinkElement = await job.findElement(
             By.css("a.info-position")
           );
@@ -58,8 +89,6 @@ async function naukrigulfJobsScraper() {
 
           const handles = await driver.getAllWindowHandles();
           await driver.switchTo().window(handles[handles.length - 1]);
-
-          // ================= LEFT SIDE DATA =================
 
           // Job title
           const titleElement = await driver.findElement(
@@ -75,7 +104,7 @@ async function naukrigulfJobsScraper() {
               By.css("p.info-org")
             );
             company = await companyElement.getText();
-          } catch { }
+          } catch {}
 
           // Candidate requirements
           const requirements = {};
@@ -86,11 +115,10 @@ async function naukrigulfJobsScraper() {
           for (const block of requirementBlocks) {
             const head = await block.findElement(By.css(".head")).getText();
             const value = await block.findElement(By.css(".value")).getText();
-
             requirements[head.toLowerCase().replace(/\s+/g, "_")] = value;
           }
 
-          // Job description (both sections)
+          // Job description
           const descriptionElements = await driver.findElements(
             By.css("article.job-description")
           );
@@ -99,8 +127,6 @@ async function naukrigulfJobsScraper() {
           for (const desc of descriptionElements) {
             fullDescription += (await desc.getText()) + "\n\n";
           }
-
-          // ================= RIGHT SIDE DATA =================
 
           // External company link
           await driver.wait(
@@ -115,27 +141,58 @@ async function naukrigulfJobsScraper() {
           );
           const externalLink = await externalLinkElement.getAttribute("href");
 
-          // Save final job data
           if (
             externalLink &&
-            !jobsData.some(job => job.externalLink === externalLink)
+            !results.some((r) => r.external_job_id === mainJobUrl)
           ) {
-            jobsData.push({
+            // Parse structured requirements
+            const salary = parseSalary(requirements.salary);
+            const urlPath = mainJobUrl.split("/").filter(Boolean).pop() || mainJobUrl;
+
+            // Extract company website domain from externalLink
+            let companyWebsite = null;
+            try {
+              companyWebsite = new URL(externalLink).origin;
+            } catch {}
+
+            // Build required_qualifications from education
+            const reqQuals = [];
+            if (requirements.education) reqQuals.push(requirements.education);
+
+            results.push({
               title,
-              company,
-              requirements,
+              source_url: mainJobUrl,
               description: fullDescription.trim(),
-              externalLink
+              posted_at: null,
+              external_job_id: urlPath,
+              external_source: "NaukriGulf",
+              source_type: "SCRAPER",
+              source_base_url: "https://www.naukrigulf.com",
+              is_remote: false,
+              location: requirements.location || null,
+              country_code: "AE",
+              job_type: mapJobType(requirements.job_type || requirements.employment_type),
+              experience_level: parseExperienceToLevel(requirements.experience),
+              salary_min: salary.min,
+              salary_max: salary.max,
+              salary_currency: salary.currency,
+              required_qualifications: reqQuals,
+              categories: [],
+              company: {
+                name: company,
+                website: companyWebsite,
+                location: requirements.location || null,
+                country_code: "AE",
+              },
             });
+
             jobsCollected++;
             console.log(`Collected (${jobsCollected}/15): ${title}`);
           }
 
-          // Close tab and return
           await driver.close();
           await driver.switchTo().window(handles[0]);
           await driver.sleep(1000);
-
         } catch (err) {
           console.log("Skipped one job due to error");
           const handles = await driver.getAllWindowHandles();
@@ -145,7 +202,6 @@ async function naukrigulfJobsScraper() {
         }
       }
 
-      // Pagination
       if (jobsCollected < 15) {
         try {
           const nextBtn = await driver.findElement(
@@ -164,18 +220,11 @@ async function naukrigulfJobsScraper() {
       }
     }
 
-    // Save to file
-    fs.writeFileSync(
-      "external_job_links.json",
-      JSON.stringify(jobsData, null, 2),
-      "utf8"
-    );
-
-    return jobsData;
-
+    console.log(`Scraped ${results.length} jobs from NaukriGulf`);
+    return results;
   } finally {
     await driver.quit();
   }
 }
 
-module.exports = naukrigulfJobsScraper;
+module.exports = scrapeNaukriGulf;

@@ -1,35 +1,30 @@
-const { exec } = require("child_process");
+require('dotenv').config();
+const { processScraperResults } = require('./lib/uploader');
 
-const scripts = [
-  "node scrapers/avjobs.js",
-  "node scrapers/jobicy.js",
-  "node scrapers/jobsinjapan.js",
-  "node scrapers/NaukriGulf-Scraper.js",
-  "node scrapers/realworkfromanywhere.js",
-  "node scrapers/scraper_old.js",
-  "node scrapers/tokyodev.js",
-  "node scrapers/weworkremotely.js"
+const scrapers = [
+  { name: 'WeWorkRemotely', fn: require('./scrapers/weworkremotely') },
+  { name: 'Jobicy', fn: require('./scrapers/jobicy') },
+  { name: 'AVJobs', fn: require('./scrapers/avjobs') },
+  { name: 'RealWorkFromAnywhere', fn: require('./scrapers/realworkfromanywhere') },
+  { name: 'TokyoDev', fn: require('./scrapers/tokyodev') },
+  { name: 'JobsInJapan', fn: require('./scrapers/jobsinjapan') },
+  { name: 'NaukriGulf', fn: require('./scrapers/NaukriGulf-Scraper') },
 ];
 
-async function runScripts() {
-  for (const script of scripts) {
-    console.log(`Running: ${script}`);
+async function run() {
+  for (const { name, fn } of scrapers) {
+    try {
+      console.log(`\nRunning ${name}...`);
+      const jobs = await fn();
+      console.log(`${name}: scraped ${jobs.length} jobs`);
 
-    await new Promise((resolve, reject) => {
-      exec(script, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`Error in ${script}`);
-          console.error(stderr);
-          resolve(); // continue to next scraper
-        } else {
-          console.log(stdout);
-          resolve();
-        }
-      });
-    });
+      const stats = await processScraperResults(jobs);
+      console.log(`${name}: ${JSON.stringify(stats)}`);
+    } catch (err) {
+      console.error(`${name} failed:`, err.message);
+    }
   }
-
-  console.log("All scrapers finished.");
+  console.log('\nAll scrapers finished.');
 }
 
-runScripts();
+run();

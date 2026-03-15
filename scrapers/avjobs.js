@@ -1,45 +1,42 @@
 const axios = require("axios");
 const xml2js = require("xml2js");
-const fs = require("fs");
 
 const FEED_URL =
   "https://www.avjobs.com/special/RSS/rss_public_mgt_eng.asp";
 
 async function scrapeAVJobs() {
-  try {
-    // 1. Fetch RSS feed
-    const response = await axios.get(FEED_URL, {
-      timeout: 15000,
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-      },
-    });
+  const response = await axios.get(FEED_URL, {
+    timeout: 15000,
+    headers: { "User-Agent": "Mozilla/5.0" },
+  });
 
-    // 2. Parse XML
-    const parser = new xml2js.Parser({ explicitArray: false });
-    const parsed = await parser.parseStringPromise(response.data);
+  const parser = new xml2js.Parser({ explicitArray: false });
+  const parsed = await parser.parseStringPromise(response.data);
+  const items = parsed.rss.channel.item;
 
-    // 3. Extract items
-    const items = parsed.rss.channel.item;
+  const jobs = (Array.isArray(items) ? items : [items]).map((item) => {
+    const urlPath = (item.link || "").split("/").filter(Boolean).pop() || item.link;
 
-    const jobs = items.map((item) => ({
+    return {
       title: item.title,
-      link: item.link,
+      source_url: item.link,
       description: item.description,
-      publishedAt: item.pubDate,
-      source: "AVJobs",
-    }));
+      posted_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
+      external_job_id: urlPath,
+      external_source: "AVJobs",
+      source_type: "RSS",
+      source_base_url: "https://www.avjobs.com",
+      is_remote: false,
+      categories: [],
+      company: {
+        name: null,
+        industry: "Aviation",
+      },
+    };
+  });
 
-    // 4. Save to file
-    fs.writeFileSync(
-      "avjobs_jobs.json",
-      JSON.stringify(jobs, null, 2)
-    );
-
-    console.log(`✅ Scraped ${jobs.length} jobs from AVJobs`);
-  } catch (error) {
-    console.error("❌ Error scraping AVJobs:", error.message);
-  }
+  console.log(`Scraped ${jobs.length} jobs from AVJobs`);
+  return jobs;
 }
 
-scrapeAVJobs();
+module.exports = scrapeAVJobs;

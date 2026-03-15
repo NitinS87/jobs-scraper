@@ -1,2 +1,6 @@
 node_modules/
 .env
+*_jobs.json
+jobs.json
+external_job_links.json
+tokyodev.json
