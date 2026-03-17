@@ -1,4 +1,7 @@
-const { chromium } = require("playwright");
+const playwright = require("playwright-extra");
+const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+
+playwright.chromium.use(StealthPlugin());
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -224,7 +227,7 @@ async function scrapeDetailPage(browser, url) {
 }
 
 async function scrapeNaukriGulf() {
-  const browser = await chromium.launch({
+  const browser = await playwright.chromium.launch({
     headless: true,
     args: [
       "--disable-blink-features=AutomationControlled",
@@ -311,37 +314,27 @@ async function scrapeNaukriGulf() {
       `NaukriGulf: Total job URLs to scrape: ${allJobUrls.length}`
     );
 
-    // Scrape detail pages in batches
+    // Scrape detail pages sequentially (stealth plugin conflicts with parallel page opens)
     const results = [];
-    for (let i = 0; i < allJobUrls.length; i += BATCH_SIZE) {
-      const batch = allJobUrls.slice(i, i + BATCH_SIZE);
-      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-      const totalBatches = Math.ceil(allJobUrls.length / BATCH_SIZE);
+    for (let i = 0; i < allJobUrls.length; i++) {
+      const url = allJobUrls[i];
       console.log(
-        `NaukriGulf: Processing batch ${batchNum}/${totalBatches} (${batch.length} jobs)`
+        `NaukriGulf: Detail page ${i + 1}/${allJobUrls.length}`
       );
 
-      const batchResults = await Promise.allSettled(
-        batch.map((url) => scrapeDetailPage(context, url))
-      );
-
-      for (let j = 0; j < batchResults.length; j++) {
-        const result = batchResults[j];
-        if (result.status === "fulfilled" && result.value?.title) {
-          results.push(result.value);
-        } else if (result.status === "rejected") {
-          console.warn(
-            `NaukriGulf: Failed to scrape ${batch[j]}: ${result.reason?.message || result.reason}`
-          );
+      try {
+        const job = await scrapeDetailPage(context, url);
+        if (job?.title) {
+          results.push(job);
         } else {
-          console.warn(
-            `NaukriGulf: No title extracted for ${batch[j]}, skipping`
-          );
+          console.warn(`NaukriGulf: No title extracted for ${url}, skipping`);
         }
+      } catch (err) {
+        console.warn(`NaukriGulf: Failed to scrape ${url}: ${err.message}`);
       }
 
-      // Delay between batches to avoid rate limiting
-      if (i + BATCH_SIZE < allJobUrls.length) {
+      // Delay between pages to avoid rate limiting
+      if (i + 1 < allJobUrls.length) {
         await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
       }
     }
