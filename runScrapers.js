@@ -19,7 +19,7 @@ async function run() {
       console.log(`${name}: scraped ${jobs.length} jobs`);
 
       const stats = await processScraperResults(jobs);
-      console.log(`${name}: ${JSON.stringify(stats)}`);
+      console.log(`${name}: inserted=${stats.inserted}, updated=${stats.updated}, errors=${stats.errors}`);
     } catch (err) {
       console.error(`${name} failed:`, err.message);
     }
