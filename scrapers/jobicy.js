@@ -1,12 +1,16 @@
 const axios = require("axios");
 const xml2js = require("xml2js");
-const { chromium } = require("playwright");
+const playwright = require("playwright-extra");
+const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+const UserAgent = require("user-agents");
 const { parseCountryCode } = require("../lib/descriptionParser");
+
+playwright.chromium.use(StealthPlugin());
 
 const FEED_URL = "https://jobicy.com/feed/job_feed";
 
 const DETAIL_BATCH_SIZE = 5;
-const DETAIL_PAGE_TIMEOUT = 15000;
+const DETAIL_PAGE_TIMEOUT = 30000;
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -26,7 +30,7 @@ async function fetchDetailPage(context, url) {
   const page = await context.newPage();
   try {
     await page.goto(url, {
-      waitUntil: "domcontentloaded",
+      waitUntil: "load",
       timeout: DETAIL_PAGE_TIMEOUT,
     });
 
@@ -158,11 +162,11 @@ async function scrapeJobicy() {
   console.log(`Fetched ${rssItems.length} RSS items from Jobicy, fetching detail pages...`);
 
   // Step 2: Launch Playwright for detail pages
-  const browser = await chromium.launch({ headless: true });
+  const browser = await playwright.chromium.launch({ headless: true });
   const context = await browser.newContext({
-    userAgent:
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    userAgent: new UserAgent().toString(),
     viewport: { width: 1280, height: 800 },
+    locale: "en-US",
   });
 
   try {

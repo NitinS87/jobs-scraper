@@ -1,8 +1,12 @@
 const axios = require("axios");
 const xml2js = require("xml2js");
 const cheerio = require("cheerio");
-const { chromium } = require("playwright");
+const playwright = require("playwright-extra");
+const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+const UserAgent = require("user-agents");
 const { parseCountryCode } = require("../lib/descriptionParser");
+
+playwright.chromium.use(StealthPlugin());
 
 const FEED_URLS = [
   "https://weworkremotely.com/categories/remote-full-stack-programming-jobs.rss",
@@ -39,12 +43,37 @@ async function fetchDetailPage(context, url) {
 
       const text = document.body.innerText;
 
-      // Salary section
-      const salaryMatch = text.match(/\$\s?([\d,]+)\s*[-–—to]+\s*\$?\s*([\d,]+)/);
-      if (salaryMatch) {
-        result.salary_min = parseInt(salaryMatch[1].replace(/,/g, ""), 10);
-        result.salary_max = parseInt(salaryMatch[2].replace(/,/g, ""), 10);
-        result.salary_currency = "USD";
+      // Salary from structured sidebar "About the job" list items
+      const aboutItems = document.querySelectorAll("li");
+      for (const li of aboutItems) {
+        const liText = li.innerText.trim();
+        // Match "Salary" label followed by salary range like "$75,000 - $99,999 USD"
+        if (liText.startsWith("Salary")) {
+          const salaryLink = li.querySelector("a[href*='salary']");
+          const salaryText = salaryLink ? salaryLink.innerText.trim() : liText;
+          const sMatch = salaryText.match(/\$\s?([\d,]+)\s*[-–—to]+\s*\$?\s?([\d,]+)/);
+          if (sMatch) {
+            result.salary_min = parseInt(sMatch[1].replace(/,/g, ""), 10);
+            result.salary_max = parseInt(sMatch[2].replace(/,/g, ""), 10);
+            result.salary_currency = "USD";
+          }
+        }
+      }
+
+      // Fallback: regex from full page text
+      if (!result.salary_min) {
+        const salaryMatch = text.match(/\$\s?([\d,]+)\s*[-–—to]+\s*\$?\s*([\d,]+)/);
+        if (salaryMatch) {
+          result.salary_min = parseInt(salaryMatch[1].replace(/,/g, ""), 10);
+          result.salary_max = parseInt(salaryMatch[2].replace(/,/g, ""), 10);
+          result.salary_currency = "USD";
+        }
+      }
+
+      // Extract HQ/country from description header "Headquarters: City"
+      const hqMatch = text.match(/Headquarters:\s*(.+?)(?:\n|$)/i);
+      if (hqMatch) {
+        result.headquarters = hqMatch[1].trim();
       }
 
       // Application URL
@@ -207,11 +236,11 @@ async function scrapeWeWorkRemotely() {
   console.log(`Fetched ${rssItems.length} unique RSS items from WeWorkRemotely, fetching detail pages...`);
 
   // Step 2: Launch Playwright for detail pages
-  const browser = await chromium.launch({ headless: true });
+  const browser = await playwright.chromium.launch({ headless: true });
   const context = await browser.newContext({
-    userAgent:
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    userAgent: new UserAgent().toString(),
     viewport: { width: 1280, height: 800 },
+    locale: "en-US",
   });
 
   try {
@@ -278,7 +307,7 @@ async function scrapeWeWorkRemotely() {
       const description = detail?.description || item.description;
       const regionText = detail?.region || detail?.location || item.region || null;
       const location = resolveLocation(regionText) || companyLocation || "Remote";
-      const country_code = parseCountryCode(item.country || regionText || companyLocation) || null;
+      const country_code = parseCountryCode(item.country || regionText || detail?.headquarters || companyLocation) || null;
 
       // Job type from RSS field or detail page
       const rssType = item.type || null;

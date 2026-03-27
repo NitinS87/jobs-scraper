@@ -1,11 +1,22 @@
 const playwright = require("playwright-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+const { parseCountryCode } = require("../lib/descriptionParser");
 
 playwright.chromium.use(StealthPlugin());
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const BASE_URL = "https://www.naukrigulf.com";
+
+function isValidUrl(str) {
+  if (!str) return false;
+  try {
+    const url = new URL(str);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 const START_URL = `${BASE_URL}/software-engineer-jobs?easyApply=false`;
 const MAX_JOBS = 100;
 const BATCH_SIZE = 5;
@@ -37,12 +48,16 @@ function parseSalary(salaryStr) {
 
 function mapJobType(typeStr) {
   if (!typeStr) return null;
-  const lower = typeStr.toLowerCase();
+  const lower = typeStr.toLowerCase().replace(/[_-]/g, " ");
+  if (lower.includes("full") && lower.includes("time")) return "FULL_TIME";
   if (lower.includes("full")) return "FULL_TIME";
+  if (lower.includes("part") && lower.includes("time")) return "PART_TIME";
   if (lower.includes("part")) return "PART_TIME";
   if (lower.includes("contract")) return "CONTRACT";
   if (lower.includes("intern")) return "INTERNSHIP";
   if (lower.includes("freelance")) return "FREELANCE";
+  if (lower.includes("temporary") || lower.includes("temp")) return "CONTRACT";
+  if (lower.includes("permanent")) return "FULL_TIME";
   return null;
 }
 
@@ -91,10 +106,11 @@ async function scrapeDetailPage(browser, url) {
       title = jsonLd.title || null;
       company =
         jsonLd.hiringOrganization?.name || company;
-      companyWebsite =
+      const candidateWebsite =
         jsonLd.hiringOrganization?.sameAs ||
         jsonLd.hiringOrganization?.url ||
         null;
+      companyWebsite = isValidUrl(candidateWebsite) ? candidateWebsite : null;
       location =
         jsonLd.jobLocation?.address?.addressLocality ||
         jsonLd.jobLocation?.address?.addressRegion ||
@@ -195,6 +211,17 @@ async function scrapeDetailPage(browser, url) {
     const salary = parseSalary(salaryStr);
     const urlPath = url.split("/").filter(Boolean).pop() || url;
 
+    // Derive country_code from JSON-LD address or location text
+    const addressCountry = jsonLd?.jobLocation?.address?.addressCountry || null;
+    const country_code = parseCountryCode(addressCountry) || parseCountryCode(location) || "AE";
+
+    // Detect remote from location/job type text
+    const locationLower = (location || "").toLowerCase();
+    const is_remote =
+      locationLower.includes("remote") ||
+      locationLower.includes("work from home") ||
+      (jsonLd?.jobLocationType || "").toUpperCase() === "TELECOMMUTE";
+
     return {
       title,
       source_url: url,
@@ -204,9 +231,9 @@ async function scrapeDetailPage(browser, url) {
       external_source: "NaukriGulf",
       source_type: "SCRAPER",
       source_base_url: BASE_URL,
-      is_remote: false,
+      is_remote,
       location,
-      country_code: "AE",
+      country_code,
       job_type: mapJobType(jobTypeStr),
       experience_level: parseExperienceToLevel(experienceStr),
       salary_min: salary.min,
@@ -218,7 +245,7 @@ async function scrapeDetailPage(browser, url) {
         name: company,
         website: companyWebsite,
         location,
-        country_code: "AE",
+        country_code,
       },
     };
   } finally {

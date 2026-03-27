@@ -106,18 +106,20 @@ async function fetchDetailPage(url) {
       const reqs = Array.isArray(jsonLd.applicantLocationRequirements)
         ? jsonLd.applicantLocationRequirements
         : [jsonLd.applicantLocationRequirements];
-      // If only 1 country listed, use it; if many (>5), it's worldwide
       const countries = reqs
         .filter(r => r["@type"] === "Country")
         .map(r => r.name)
         .filter(Boolean);
-      if (countries.length === 1) {
-        result.country_code = countries[0]; // Usually an ISO code
-      } else if (countries.length > 0 && countries.length <= 5) {
-        // Few specific countries — use the first one
+      if (countries.length >= 1 && countries.length <= 10) {
+        // Use the first country as the primary country code
         result.country_code = countries[0];
       }
-      // If >5 countries, it's worldwide — leave null
+      // If >10 countries, it's truly worldwide — leave null
+    }
+
+    // Try hiringOrganization location as last resort
+    if (!result.country_code && jsonLd.hiringOrganization?.address?.addressCountry) {
+      result.country_code = jsonLd.hiringOrganization.address.addressCountry;
     }
 
     // Salary from JSON-LD
