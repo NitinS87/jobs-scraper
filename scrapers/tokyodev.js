@@ -1,19 +1,42 @@
-const { chromium } = require("playwright");
+const playwright = require("playwright-extra");
+const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+const UserAgent = require("user-agents");
+
+playwright.chromium.use(StealthPlugin());
 
 const DETAIL_BATCH_SIZE = 5;
-const DETAIL_PAGE_TIMEOUT = 15000;
+const DETAIL_PAGE_TIMEOUT = 30000;
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isCloudflareChallenge(html) {
+  if (!html) return false;
+  return (
+    html.includes("challenge-error-text") ||
+    html.includes("Enable JavaScript and cookies to continue") ||
+    html.includes("cf-challenge") ||
+    html.includes("cf-browser-verification") ||
+    html.includes("Just a moment...") ||
+    html.includes("Checking your browser")
+  );
 }
 
 async function fetchDetailPage(context, url) {
   const page = await context.newPage();
   try {
     await page.goto(url, {
-      waitUntil: "domcontentloaded",
+      waitUntil: "load",
       timeout: DETAIL_PAGE_TIMEOUT,
     });
+
+    // Wait for actual content to render (article or main content area)
+    await page
+      .waitForSelector("article, [class*='description'], [class*='content'], main", {
+        timeout: 10000,
+      })
+      .catch(() => {});
 
     const detail = await page.evaluate(() => {
       const result = {};
@@ -224,6 +247,12 @@ async function fetchDetailPage(context, url) {
       return result;
     });
 
+    // Detect Cloudflare challenge pages and discard
+    if (detail?.description && isCloudflareChallenge(detail.description)) {
+      console.warn(`Cloudflare challenge detected on ${url}, discarding description`);
+      delete detail.description;
+    }
+
     return detail;
   } catch (err) {
     console.warn(`Failed to fetch TokyoDev detail page ${url}: ${err.message}`);
@@ -234,12 +263,13 @@ async function fetchDetailPage(context, url) {
 }
 
 async function scrapeTokyoDev() {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await playwright.chromium.launch({ headless: true });
 
   const context = await browser.newContext({
-    userAgent:
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    userAgent: new UserAgent().toString(),
     viewport: { width: 1280, height: 800 },
+    locale: "en-US",
+    timezoneId: "Asia/Tokyo",
   });
 
   const page = await context.newPage();
