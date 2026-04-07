@@ -1,6 +1,11 @@
 const playwright = require("playwright-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const UserAgent = require("user-agents");
+const {
+  parseDescription,
+  parseExperienceLevelFromTitle,
+  parseSalaryText,
+} = require("../lib/descriptionParser");
 
 playwright.chromium.use(StealthPlugin());
 
@@ -370,9 +375,30 @@ async function scrapeTokyoDev() {
       const description = detail?.description ||
         `${job.title} at ${job.company}. Location: ${location}. View full details at ${job.job_url}`;
 
+      // Parse structured fields from description HTML
+      const parsed = parseDescription(description);
+
       const posted_at = detail?.posted_at
         ? new Date(detail.posted_at).toISOString()
         : null;
+
+      // Salary: parse from salary_text, then from description
+      let salary_min = null;
+      let salary_max = null;
+      let salary_currency = null;
+      if (detail?.salary_text) {
+        const salaryParsed = parseSalaryText(detail.salary_text);
+        if (salaryParsed) {
+          salary_min = salaryParsed.min;
+          salary_max = salaryParsed.max;
+          salary_currency = salaryParsed.currency;
+        }
+      }
+      if (!salary_min && parsed.salary) {
+        salary_min = parsed.salary.min;
+        salary_max = parsed.salary.max;
+        salary_currency = parsed.salary.currency;
+      }
 
       const result = {
         title: job.title,
@@ -386,6 +412,20 @@ async function scrapeTokyoDev() {
         is_remote: job.is_remote,
         location,
         country_code: "JP",
+        job_type: detail?.job_type || job.job_type || parsed.job_type || null,
+        experience_level: parseExperienceLevelFromTitle(job.title) || parsed.experience_level || null,
+        salary_min,
+        salary_max,
+        salary_currency,
+        skills: parsed.skills.length > 0 ? parsed.skills : [],
+        requirements: parsed.requirements.length > 0 ? parsed.requirements : [],
+        responsibilities: parsed.responsibilities.length > 0 ? parsed.responsibilities : [],
+        benefits: parsed.benefits.length > 0 ? parsed.benefits : [],
+        summary: parsed.summary || null,
+        highlights: parsed.highlights.length > 0 ? parsed.highlights : [],
+        required_qualifications: parsed.required_qualifications.length > 0 ? parsed.required_qualifications : [],
+        preferred_qualifications: parsed.preferred_qualifications.length > 0 ? parsed.preferred_qualifications : [],
+        visa_sponsorship: detail?.visa_sponsorship || parsed.visa_sponsorship || false,
         categories: detail?.tags || [],
         company: {
           name: job.company,
@@ -394,12 +434,6 @@ async function scrapeTokyoDev() {
           ...(detail?.company_website && { website: detail.company_website }),
         },
       };
-
-      // Job type: prefer detail page (more specific), fall back to listing tag
-      if (detail?.job_type) result.job_type = detail.job_type;
-      else if (job.job_type) result.job_type = job.job_type;
-      if (detail?.visa_sponsorship) result.visa_sponsorship = true;
-      if (detail?.salary_text) result.salary_text = detail.salary_text;
 
       return result;
     });

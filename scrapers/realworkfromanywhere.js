@@ -1,7 +1,11 @@
 const axios = require("axios");
 const xml2js = require("xml2js");
 const cheerio = require("cheerio");
-const { parseCountryCode } = require("../lib/descriptionParser");
+const {
+  parseDescription,
+  parseExperienceLevelFromTitle,
+  parseCountryCode,
+} = require("../lib/descriptionParser");
 
 const FEED_URLS = [
   "https://www.realworkfromanywhere.com/remote-developer-jobs/rss.xml",
@@ -248,6 +252,19 @@ async function scrapeRealWorkFromAnywhere() {
     const location = detail?.location || "Remote";
     const is_remote = detail?.is_remote ?? true;
 
+    // Parse structured fields from description HTML
+    const parsed = parseDescription(description);
+
+    // Salary: JSON-LD > parsed from description
+    let salary_min = detail?.salary_min || null;
+    let salary_max = detail?.salary_max || null;
+    let salary_currency = detail?.salary_currency || null;
+    if (!salary_min && parsed.salary) {
+      salary_min = parsed.salary.min;
+      salary_max = parsed.salary.max;
+      salary_currency = parsed.salary.currency;
+    }
+
     const job = {
       title: cleanTitle || title,
       source_url: link,
@@ -259,6 +276,20 @@ async function scrapeRealWorkFromAnywhere() {
       source_base_url: "https://www.realworkfromanywhere.com",
       is_remote,
       location,
+      job_type: mapEmploymentType(detail?.employment_type) || parsed.job_type || null,
+      experience_level: parseExperienceLevelFromTitle(cleanTitle || title) || parsed.experience_level || null,
+      salary_min,
+      salary_max,
+      salary_currency,
+      skills: parsed.skills.length > 0 ? parsed.skills : [],
+      requirements: parsed.requirements.length > 0 ? parsed.requirements : [],
+      responsibilities: parsed.responsibilities.length > 0 ? parsed.responsibilities : [],
+      benefits: parsed.benefits.length > 0 ? parsed.benefits : [],
+      summary: parsed.summary || null,
+      highlights: parsed.highlights.length > 0 ? parsed.highlights : [],
+      required_qualifications: parsed.required_qualifications.length > 0 ? parsed.required_qualifications : [],
+      preferred_qualifications: parsed.preferred_qualifications.length > 0 ? parsed.preferred_qualifications : [],
+      visa_sponsorship: parsed.visa_sponsorship || false,
       categories: [],
       company: finalCompanyName ? {
         name: finalCompanyName,
@@ -266,16 +297,6 @@ async function scrapeRealWorkFromAnywhere() {
         website: detail?.company_url || null,
       } : null,
     };
-
-    // Add salary if found in JSON-LD
-    if (detail?.salary_min) job.salary_min = detail.salary_min;
-    if (detail?.salary_max) job.salary_max = detail.salary_max;
-    if (detail?.salary_currency) job.salary_currency = detail.salary_currency;
-
-    // Add job type from JSON-LD
-    if (detail?.employment_type) {
-      job.job_type = mapEmploymentType(detail.employment_type);
-    }
 
     // Add expiry date
     if (detail?.valid_through) job.expires_at = detail.valid_through;

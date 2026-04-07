@@ -3,7 +3,11 @@ const xml2js = require("xml2js");
 const playwright = require("playwright-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const UserAgent = require("user-agents");
-const { parseCountryCode } = require("../lib/descriptionParser");
+const {
+  parseDescription,
+  parseExperienceLevelFromTitle,
+  parseCountryCode,
+} = require("../lib/descriptionParser");
 
 playwright.chromium.use(StealthPlugin());
 
@@ -135,6 +139,29 @@ async function fetchDetailPage(context, url) {
         result.location = locationEl.innerText.trim();
       }
 
+      // Extract metadata from dt/dd pairs in header
+      const dtElements = document.querySelectorAll("dt");
+      for (const dt of dtElements) {
+        const dtText = dt.innerText.trim().toLowerCase();
+        const dd = dt.nextElementSibling;
+        if (!dd || dd.tagName !== "DD") continue;
+        const ddText = dd.innerText.trim();
+
+        if (dtText.includes("experience")) {
+          result.experience_level_text = ddText;
+        } else if (dtText.includes("salary") && !result.salary_min) {
+          result.salary_text = ddText;
+        } else if (dtText.includes("employment")) {
+          result.employment_type = ddText;
+        }
+      }
+
+      // Get the full job description HTML
+      const descEl = document.querySelector(".job__desc");
+      if (descEl) {
+        result.description_html = descEl.innerHTML.trim();
+      }
+
       return result;
     });
 
@@ -212,18 +239,62 @@ async function scrapeJobicy() {
         logoUrl = item["media:content"].$.url || null;
       }
 
+      // Parse structured fields from description HTML
+      const parsed = parseDescription(fullDescription);
+
+      // Salary: detail page > RSS field > parsed from description
+      let salary_min = detail?.salary_min || null;
+      let salary_max = detail?.salary_max || null;
+      let salary_currency = detail?.salary_currency || null;
+
+      if (!salary_min && item["job_listing:salary"]) {
+        const rssSalary = item["job_listing:salary"];
+        const usdMatch = rssSalary.match(/\$\s?([\d,]+)\s*[-–—to]+\s*\$?\s*([\d,]+)/);
+        if (usdMatch) {
+          salary_min = parseInt(usdMatch[1].replace(/,/g, ""), 10);
+          salary_max = parseInt(usdMatch[2].replace(/,/g, ""), 10);
+          salary_currency = "USD";
+        } else {
+          const eurMatch = rssSalary.match(/€\s?([\d,]+)\s*[-–—to]+\s*€?\s*([\d,]+)/);
+          if (eurMatch) {
+            salary_min = parseInt(eurMatch[1].replace(/,/g, ""), 10);
+            salary_max = parseInt(eurMatch[2].replace(/,/g, ""), 10);
+            salary_currency = "EUR";
+          }
+        }
+      }
+
+      if (!salary_min && parsed.salary) {
+        salary_min = parsed.salary.min;
+        salary_max = parsed.salary.max;
+        salary_currency = parsed.salary.currency;
+      }
+
       const job = {
         title: item.title,
         source_url: item.link,
         description: fullDescription,
-        posted_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
+        posted_at: detail?.posted_at || (item.pubDate ? new Date(item.pubDate).toISOString() : null),
         external_job_id: externalId,
         external_source: "Jobicy",
         source_type: "RSS",
         source_base_url: "https://jobicy.com",
         is_remote: true,
         location,
-        job_type: jobType,
+        job_type: jobType || parsed.job_type || null,
+        experience_level: parseExperienceLevelFromTitle(item.title) || parsed.experience_level || null,
+        salary_min,
+        salary_max,
+        salary_currency,
+        skills: parsed.skills.length > 0 ? parsed.skills : [],
+        requirements: parsed.requirements.length > 0 ? parsed.requirements : [],
+        responsibilities: parsed.responsibilities.length > 0 ? parsed.responsibilities : [],
+        benefits: parsed.benefits.length > 0 ? parsed.benefits : [],
+        summary: parsed.summary || null,
+        highlights: parsed.highlights.length > 0 ? parsed.highlights : [],
+        required_qualifications: parsed.required_qualifications.length > 0 ? parsed.required_qualifications : [],
+        preferred_qualifications: parsed.preferred_qualifications.length > 0 ? parsed.preferred_qualifications : [],
+        visa_sponsorship: parsed.visa_sponsorship || false,
         categories,
         company: companyName ? {
           name: companyName,
@@ -231,36 +302,6 @@ async function scrapeJobicy() {
           website: detail?.company_website || null,
         } : null,
       };
-
-      // Add salary from detail page
-      if (detail?.salary_min) {
-        job.salary_min = detail.salary_min;
-        job.salary_max = detail.salary_max;
-        job.salary_currency = detail.salary_currency;
-      }
-
-      // Fallback: try RSS job_listing:salary field
-      if (!job.salary_min && item["job_listing:salary"]) {
-        const rssSalary = item["job_listing:salary"];
-        const usdMatch = rssSalary.match(/\$\s?([\d,]+)\s*[-–—to]+\s*\$?\s*([\d,]+)/);
-        if (usdMatch) {
-          job.salary_min = parseInt(usdMatch[1].replace(/,/g, ""), 10);
-          job.salary_max = parseInt(usdMatch[2].replace(/,/g, ""), 10);
-          job.salary_currency = "USD";
-        } else {
-          const eurMatch = rssSalary.match(/€\s?([\d,]+)\s*[-–—to]+\s*€?\s*([\d,]+)/);
-          if (eurMatch) {
-            job.salary_min = parseInt(eurMatch[1].replace(/,/g, ""), 10);
-            job.salary_max = parseInt(eurMatch[2].replace(/,/g, ""), 10);
-            job.salary_currency = "EUR";
-          }
-        }
-      }
-
-      // Override posted_at from JSON-LD if available
-      if (detail?.posted_at) {
-        job.posted_at = detail.posted_at;
-      }
 
       // Parse country code from location
       job.country_code = parseCountryCode(detail?.country || detail?.location || item["job_listing:location"]) || null;

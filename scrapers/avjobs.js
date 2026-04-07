@@ -1,7 +1,11 @@
 const axios = require("axios");
 const xml2js = require("xml2js");
 const cheerio = require("cheerio");
-const { parseCountryCode } = require("../lib/descriptionParser");
+const {
+  parseDescription,
+  parseExperienceLevelFromTitle,
+  parseCountryCode,
+} = require("../lib/descriptionParser");
 
 const FEED_URL =
   "https://www.avjobs.com/special/RSS/rss_public_mgt_eng.asp";
@@ -215,6 +219,9 @@ async function scrapeAVJobs() {
     const description = detail?.description || rssDesc;
     const posted_at = detail?.posted_at || (item.pubDate ? new Date(item.pubDate).toISOString() : null);
 
+    // Parse structured fields from description HTML
+    const parsed = parseDescription(description);
+
     const job = {
       title: item.title,
       source_url: item.link,
@@ -226,6 +233,20 @@ async function scrapeAVJobs() {
       source_base_url: "https://www.avjobs.com",
       is_remote: false,
       location,
+      job_type: detail?.job_type || parsed.job_type || null,
+      experience_level: parseExperienceLevelFromTitle(item.title) || parsed.experience_level || null,
+      salary_min: detail?.salary_min || (parsed.salary ? parsed.salary.min : null),
+      salary_max: detail?.salary_max || (parsed.salary ? parsed.salary.max : null),
+      salary_currency: detail?.salary_currency || (parsed.salary ? parsed.salary.currency : null),
+      skills: parsed.skills.length > 0 ? parsed.skills : [],
+      requirements: parsed.requirements.length > 0 ? parsed.requirements : [],
+      responsibilities: parsed.responsibilities.length > 0 ? parsed.responsibilities : [],
+      benefits: parsed.benefits.length > 0 ? parsed.benefits : [],
+      summary: parsed.summary || null,
+      highlights: parsed.highlights.length > 0 ? parsed.highlights : [],
+      required_qualifications: parsed.required_qualifications.length > 0 ? parsed.required_qualifications : [],
+      preferred_qualifications: parsed.preferred_qualifications.length > 0 ? parsed.preferred_qualifications : [],
+      visa_sponsorship: parsed.visa_sponsorship || false,
       categories: [],
       company: companyName ? {
         name: companyName,
@@ -233,12 +254,6 @@ async function scrapeAVJobs() {
       } : null,
     };
 
-    if (detail?.job_type) job.job_type = detail.job_type;
-    if (detail?.salary_min) {
-      job.salary_min = detail.salary_min;
-      job.salary_max = detail.salary_max;
-      job.salary_currency = detail.salary_currency;
-    }
     if (detail?.expires_at) job.expires_at = detail.expires_at;
     job.country_code = detail?.country_code || parseCountryCode(location) || null;
 

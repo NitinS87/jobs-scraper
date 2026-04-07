@@ -4,7 +4,12 @@ const cheerio = require("cheerio");
 const playwright = require("playwright-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const UserAgent = require("user-agents");
-const { parseCountryCode } = require("../lib/descriptionParser");
+const {
+  parseDescription,
+  parseExperienceLevelFromTitle,
+  parseCountryCode,
+  parseSalaryText,
+} = require("../lib/descriptionParser");
 
 playwright.chromium.use(StealthPlugin());
 
@@ -33,148 +38,150 @@ async function fetchDetailPage(context, url) {
     const detail = await page.evaluate(() => {
       const result = {};
 
-      // Full listing body content
-      const listingBody = document.querySelector(".listing-container") ||
+      // --- JSON-LD structured data (most reliable source) ---
+      const jsonLdEl = document.querySelector(
+        'script[type="application/ld+json"]'
+      );
+      if (jsonLdEl) {
+        try {
+          const ld = JSON.parse(jsonLdEl.textContent);
+          if (ld["@type"] === "JobPosting") {
+            result.jsonLd = {
+              title: ld.title,
+              employmentType: ld.employmentType,
+              datePosted: ld.datePosted,
+              validThrough: ld.validThrough,
+              directApply: ld.directApply,
+              occupationalCategory: ld.occupationalCategory,
+              url: ld.url,
+            };
+
+            // Salary from JSON-LD
+            if (ld.baseSalary && ld.baseSalary.value) {
+              const min = parseFloat(ld.baseSalary.value.minValue);
+              const max = parseFloat(ld.baseSalary.value.maxValue);
+              if (min > 0 || max > 0) {
+                result.salary_min = min || null;
+                result.salary_max = max || null;
+                result.salary_currency = ld.baseSalary.currency || "USD";
+              }
+            }
+
+            // Hiring organization
+            if (ld.hiringOrganization) {
+              result.company_name = ld.hiringOrganization.name;
+              result.company_location =
+                ld.hiringOrganization.address || null;
+              result.company_logo = ld.hiringOrganization.logo || null;
+            }
+          }
+        } catch (e) {
+          // ignore JSON parse errors
+        }
+      }
+
+      // --- Main description HTML from new page structure ---
+      // Current WWR layout: .lis-container__job__content__description
+      const descContainer = document.querySelector(
+        ".lis-container__job__content__description"
+      );
+      // Fallback to legacy selectors
+      const listingBody =
+        descContainer ||
+        document.querySelector(".listing-container") ||
         document.querySelector(".listing-body") ||
         document.querySelector("article");
+
       if (listingBody) {
         result.description = listingBody.innerHTML.trim();
       }
 
-      const text = document.body.innerText;
+      // --- Sidebar structured data ---
+      const sidebarItems = document.querySelectorAll(
+        ".lis-container__job__sidebar li"
+      );
+      for (const li of sidebarItems) {
+        const text = li.innerText.trim();
+        if (text.startsWith("Job type")) {
+          result.job_type_text = text.replace("Job type", "").trim();
+        } else if (text.startsWith("Region")) {
+          result.region = text.replace("Region", "").trim();
+        } else if (text.startsWith("Salary")) {
+          result.salary_text = text.replace("Salary", "").trim();
+        } else if (text.startsWith("Apply before")) {
+          result.apply_before = text.replace("Apply before", "").trim();
+        }
+      }
 
-      // Salary from structured sidebar "About the job" list items
-      const aboutItems = document.querySelectorAll("li");
-      for (const li of aboutItems) {
-        const liText = li.innerText.trim();
-        // Match "Salary" label followed by salary range like "$75,000 - $99,999 USD"
-        if (liText.startsWith("Salary")) {
-          const salaryLink = li.querySelector("a[href*='salary']");
-          const salaryText = salaryLink ? salaryLink.innerText.trim() : liText;
-          const sMatch = salaryText.match(/\$\s?([\d,]+)\s*[-–—to]+\s*\$?\s?([\d,]+)/);
-          if (sMatch) {
-            result.salary_min = parseInt(sMatch[1].replace(/,/g, ""), 10);
-            result.salary_max = parseInt(sMatch[2].replace(/,/g, ""), 10);
-            result.salary_currency = "USD";
+      // --- Company details from sidebar ---
+      const sidebarEl = document.querySelector(
+        ".lis-container__job__sidebar"
+      );
+      if (sidebarEl) {
+        // Company logo — skip the default WWR placeholder
+        const logo = sidebarEl.querySelector("img");
+        if (logo && !result.company_logo) {
+          const src = logo.src || "";
+          const isPlaceholder =
+            src.includes("company-name-new-listing-icon") ||
+            src.includes("placeholder");
+          if (!isPlaceholder) {
+            result.company_logo = src;
+          }
+        }
+
+        // External company website
+        const website = sidebarEl.querySelector(
+          "a[href^='http']:not([href*='weworkremotely'])"
+        );
+        if (website) result.company_website = website.href;
+
+        // Company profile URL on WWR
+        const profileLink = sidebarEl.querySelector(
+          "a[href*='/company/']"
+        );
+        if (profileLink) {
+          result.company_profile_url = profileLink.href;
+        }
+
+        // Company name from sidebar heading
+        const companyHeading = sidebarEl.querySelector("h2, h3, h4");
+        if (companyHeading && !result.company_name) {
+          result.company_name = companyHeading.innerText.trim();
+        }
+      }
+
+      // --- Company description from job listing body ---
+      // Many job posts include "About Us" / "About the Company" sections
+      const descEl = document.querySelector(
+        ".lis-container__job__content__description"
+      );
+      if (descEl) {
+        const descText = descEl.innerText;
+        const aboutPatterns = [
+          /(?:About (?:Us|the Company|Our Company))[:\s]*\n([\s\S]{30,800}?)(?:\n\n\n|\n[A-Z][a-z]+ [A-Z])/i,
+          /(?:Who (?:We Are|we are))[:\s]*\n([\s\S]{30,800}?)(?:\n\n\n|\n[A-Z][a-z]+ [A-Z])/i,
+          /(?:Company (?:Overview|Description))[:\s]*\n([\s\S]{30,800}?)(?:\n\n\n|\n[A-Z][a-z]+ [A-Z])/i,
+        ];
+        for (const p of aboutPatterns) {
+          const m = descText.match(p);
+          if (m) {
+            result.company_description = m[1]
+              .replace(/\n+/g, " ")
+              .trim()
+              .substring(0, 500);
+            break;
           }
         }
       }
 
-      // Fallback: regex from full page text
-      if (!result.salary_min) {
-        const salaryMatch = text.match(/\$\s?([\d,]+)\s*[-–—to]+\s*\$?\s*([\d,]+)/);
-        if (salaryMatch) {
-          result.salary_min = parseInt(salaryMatch[1].replace(/,/g, ""), 10);
-          result.salary_max = parseInt(salaryMatch[2].replace(/,/g, ""), 10);
-          result.salary_currency = "USD";
-        }
-      }
-
-      // Extract HQ/country from description header "Headquarters: City"
-      const hqMatch = text.match(/Headquarters:\s*(.+?)(?:\n|$)/i);
-      if (hqMatch) {
-        result.headquarters = hqMatch[1].trim();
-      }
-
-      // Application URL
-      const applyLink = document.querySelector("a[href*='apply'], a.apply-button, a[class*='apply']");
+      // --- Application URL ---
+      const applyLink = document.querySelector(
+        "a[href*='apply'], a.apply-button, a.apply-btn, a[class*='apply']"
+      );
       if (applyLink) {
         result.apply_url = applyLink.href;
       }
-
-      // Company details
-      const companyEl = document.querySelector(".company-card, .listing-header-container");
-      if (companyEl) {
-        const logo = companyEl.querySelector("img");
-        if (logo) result.company_logo = logo.src;
-
-        const website = companyEl.querySelector("a[href^='http']:not([href*='weworkremotely'])");
-        if (website) result.company_website = website.href;
-      }
-
-      // Company description
-      const companyDescEl = document.querySelector(".company-card p, .company-description, .company-bio");
-      if (companyDescEl) {
-        result.company_description = companyDescEl.innerText.trim();
-      }
-
-      // Region/location from listing meta
-      const regionEl = document.querySelector(".region, .location");
-      if (regionEl) {
-        result.region = regionEl.innerText.trim();
-        result.location = regionEl.innerText.trim();
-      }
-
-      // Also check listing header for region info
-      if (!result.region) {
-        const headerEl = document.querySelector(".listing-header-container");
-        if (headerEl) {
-          const regionInHeader = headerEl.querySelector(".region, .location, [class*='region'], [class*='location']");
-          if (regionInHeader) {
-            result.region = regionInHeader.innerText.trim();
-            result.location = regionInHeader.innerText.trim();
-          }
-        }
-      }
-
-      // Skills extraction from tag/skill elements
-      const skillEls = document.querySelectorAll("[class*='skill'], [class*='tag'], .listing-tag, .tag");
-      const skillSet = new Set();
-      skillEls.forEach((el) => {
-        const t = el.innerText.trim();
-        if (t && t.length < 50) skillSet.add(t);
-      });
-
-      // Also extract tech keywords from description text
-      const techKeywords = [
-        'JavaScript', 'TypeScript', 'Python', 'Java', 'Golang', 'Go', 'Ruby', 'Rust',
-        'C\\+\\+', 'C#', '\\.NET', 'PHP', 'Swift', 'Kotlin', 'Scala', 'Elixir',
-        'React', 'Angular', 'Vue', 'Svelte', 'Next\\.js', 'Nuxt', 'Node\\.js', 'Express',
-        'Django', 'Flask', 'FastAPI', 'Rails', 'Spring', 'Laravel',
-        'AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'Terraform', 'Ansible',
-        'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Elasticsearch', 'DynamoDB',
-        'GraphQL', 'REST API', 'gRPC', 'Kafka', 'RabbitMQ',
-        'Machine Learning', 'Deep Learning', 'PyTorch', 'TensorFlow',
-        'HTML', 'CSS', 'Sass', 'Tailwind', 'Webpack', 'Vite',
-        'Git', 'CI/CD', 'Jenkins', 'GitHub Actions',
-        'Linux', 'SQL', 'NoSQL', 'Figma', 'Agile', 'Scrum',
-        'Solidity', 'Web3', 'Blockchain',
-      ];
-      const techRegex = new RegExp('\\b(' + techKeywords.join('|') + ')\\b', 'gi');
-      const techMatches = text.match(techRegex) || [];
-      techMatches.forEach((m) => skillSet.add(m));
-      result.skills = [...skillSet];
-
-      // Requirements extraction: find <ul> lists after headings with requirement-like text
-      const requirements = [];
-      const headings = document.querySelectorAll("h1, h2, h3, h4, h5, h6, strong, b");
-      const reqPattern = /requirement|qualification|looking for|must have|what you.ll need|who you are/i;
-      headings.forEach((heading) => {
-        if (!reqPattern.test(heading.innerText)) return;
-        let next = heading.tagName.match(/^(STRONG|B)$/i) ? heading.parentElement?.nextElementSibling : heading.nextElementSibling;
-        let attempts = 0;
-        while (next && attempts < 5) {
-          if (next.tagName === "UL" || next.tagName === "OL") {
-            next.querySelectorAll("li").forEach((li) => {
-              const t = li.innerText.trim();
-              if (t) requirements.push(t);
-            });
-            break;
-          }
-          if (/^H[1-6]$/.test(next.tagName)) break;
-          const nestedList = next.querySelector("ul, ol");
-          if (nestedList) {
-            nestedList.querySelectorAll("li").forEach((li) => {
-              const t = li.innerText.trim();
-              if (t) requirements.push(t);
-            });
-            break;
-          }
-          next = next.nextElementSibling;
-          attempts++;
-        }
-      });
-      result.requirements = requirements;
 
       return result;
     });
@@ -191,14 +198,33 @@ async function fetchDetailPage(context, url) {
 function resolveLocation(regionText) {
   if (!regionText) return "Remote";
   const r = regionText.toLowerCase().trim();
-  if (/anywhere in the world/i.test(r) || /worldwide/i.test(r) || /global/i.test(r)) return "Remote (Worldwide)";
-  if (/\bus only\b/i.test(r) || r === "us" || r === "usa") return "Remote (US)";
-  if (/\beurope only\b/i.test(r) || /\beu only\b/i.test(r)) return "Remote (Europe)";
+  if (
+    /anywhere in the world/i.test(r) ||
+    /worldwide/i.test(r) ||
+    /global/i.test(r)
+  )
+    return "Remote (Worldwide)";
+  if (/\bus only\b/i.test(r) || r === "us" || r === "usa")
+    return "Remote (US)";
+  if (/\beurope only\b/i.test(r) || /\beu only\b/i.test(r))
+    return "Remote (Europe)";
   if (/\buk only\b/i.test(r)) return "Remote (UK)";
   if (/\bcanada only\b/i.test(r)) return "Remote (Canada)";
-  if (/\blatam\b/i.test(r) || /latin america/i.test(r)) return "Remote (LATAM)";
-  if (/\bapac\b/i.test(r) || /asia.pacific/i.test(r)) return "Remote (APAC)";
+  if (/\blatam\b/i.test(r) || /latin america/i.test(r))
+    return "Remote (LATAM)";
+  if (/\bapac\b/i.test(r) || /asia.pacific/i.test(r))
+    return "Remote (APAC)";
   return regionText.trim();
+}
+
+function parseJobType(text) {
+  if (!text) return null;
+  const t = text.toLowerCase();
+  if (t.includes("full")) return "FULL_TIME";
+  if (t.includes("part")) return "PART_TIME";
+  if (t.includes("contract")) return "CONTRACT";
+  if (t.includes("freelance")) return "FREELANCE";
+  return null;
 }
 
 async function scrapeWeWorkRemotely() {
@@ -219,21 +245,28 @@ async function scrapeWeWorkRemotely() {
 
       let added = 0;
       for (const item of feedItems) {
-        const urlPath = (item.link || "").split("/").filter(Boolean).pop() || item.link;
+        const urlPath = (item.link || "")
+          .split("/")
+          .filter(Boolean)
+          .pop() || item.link;
         if (!seenLinks.has(urlPath)) {
           seenLinks.add(urlPath);
           allRssItems.push(item);
           added++;
         }
       }
-      console.log(`  Feed ${feedUrl.split("/").pop()}: ${feedItems.length} items (${added} new, ${feedItems.length - added} duplicates)`);
+      console.log(
+        `  Feed ${feedUrl.split("/").pop()}: ${feedItems.length} items (${added} new, ${feedItems.length - added} duplicates)`
+      );
     } catch (err) {
       console.warn(`  Failed to fetch feed ${feedUrl}: ${err.message}`);
     }
   }
 
   const rssItems = allRssItems;
-  console.log(`Fetched ${rssItems.length} unique RSS items from WeWorkRemotely, fetching detail pages...`);
+  console.log(
+    `Fetched ${rssItems.length} unique RSS items from WeWorkRemotely, fetching detail pages...`
+  );
 
   // Step 2: Launch Playwright for detail pages
   const browser = await playwright.chromium.launch({ headless: true });
@@ -256,7 +289,9 @@ async function scrapeWeWorkRemotely() {
       if (i + DETAIL_BATCH_SIZE < rssItems.length) {
         await delay(500 + Math.random() * 500);
       }
-      console.log(`  Detail pages: ${Math.min(i + DETAIL_BATCH_SIZE, rssItems.length)}/${rssItems.length}`);
+      console.log(
+        `  Detail pages: ${Math.min(i + DETAIL_BATCH_SIZE, rssItems.length)}/${rssItems.length}`
+      );
     }
 
     const jobs = rssItems.map((item, idx) => {
@@ -271,6 +306,11 @@ async function scrapeWeWorkRemotely() {
         const colonIdx = rawTitle.indexOf(": ");
         companyName = rawTitle.substring(0, colonIdx).trim();
         cleanTitle = rawTitle.substring(colonIdx + 2).trim();
+      }
+
+      // Prefer company name from JSON-LD
+      if (detail?.company_name) {
+        companyName = detail.company_name;
       }
 
       // Parse RSS HTML description for fallback data
@@ -289,48 +329,93 @@ async function scrapeWeWorkRemotely() {
       $("a").each((_, a) => {
         const href = $(a).attr("href") || "";
         const text = $(a).text() || "";
-        if (/apply|company|website/i.test(text) && href.startsWith("http")) {
+        if (
+          /apply|company|website/i.test(text) &&
+          href.startsWith("http")
+        ) {
           companyWebsite = href;
         }
       });
-      // First link in RSS description is often the company website
       if (!companyWebsite) {
         const firstLink = $("a").first().attr("href") || "";
-        if (firstLink.startsWith("http") && !firstLink.includes("weworkremotely.com")) {
+        if (
+          firstLink.startsWith("http") &&
+          !firstLink.includes("weworkremotely.com")
+        ) {
           companyWebsite = firstLink;
         }
       }
-      // Use RSS state field for company location
+
       const rssState = item.state || null;
 
-      // Use detail page data when available, fall back to RSS
-      const description = detail?.description || item.description;
-      const regionText = detail?.region || detail?.location || item.region || null;
-      const location = resolveLocation(regionText) || companyLocation || "Remote";
-      const country_code = parseCountryCode(item.country || regionText || detail?.headquarters || companyLocation) || null;
+      // Use detail page description (full HTML), fall back to RSS
+      const descriptionHtml = detail?.description || item.description;
 
-      // Job type from RSS field or detail page
-      const rssType = item.type || null;
-      let job_type = null;
-      if (rssType) {
-        const t = rssType.toLowerCase();
-        if (t.includes("full")) job_type = "FULL_TIME";
-        else if (t.includes("part")) job_type = "PART_TIME";
-        else if (t.includes("contract")) job_type = "CONTRACT";
-        else if (t.includes("freelance")) job_type = "FREELANCE";
+      // Parse the description HTML using shared parser for structured extraction
+      const parsed = parseDescription(descriptionHtml);
+
+      // Region/location: prefer sidebar, then RSS
+      const regionText =
+        detail?.region || item.region || null;
+      const location =
+        resolveLocation(regionText) || companyLocation || "Remote";
+      const country_code =
+        parseCountryCode(
+          item.country ||
+            regionText ||
+            detail?.company_location ||
+            companyLocation
+        ) || null;
+
+      // Job type: sidebar > JSON-LD > RSS > parsed from description
+      const job_type =
+        parseJobType(detail?.job_type_text) ||
+        parseJobType(detail?.jsonLd?.employmentType) ||
+        parseJobType(item.type) ||
+        parsed.job_type ||
+        null;
+
+      // Experience level from title, then from parsed description
+      const experience_level =
+        parseExperienceLevelFromTitle(cleanTitle) ||
+        parsed.experience_level ||
+        null;
+
+      // Salary: detail page sidebar text > JSON-LD > parsed from description > RSS fallback
+      let salary_min = null;
+      let salary_max = null;
+      let salary_currency = null;
+
+      // Try sidebar salary text first
+      if (detail?.salary_text) {
+        const salaryParsed = parseSalaryText(detail.salary_text);
+        if (salaryParsed) {
+          salary_min = salaryParsed.min;
+          salary_max = salaryParsed.max;
+          salary_currency = salaryParsed.currency;
+        }
       }
 
-      // Skills from RSS field, supplemented by detail page
-      const rssSkills = item.skills ? item.skills.split(/,\s*and\s*|,\s*|\s+and\s+/).map(s => s.trim()).filter(Boolean) : [];
-      const combinedSkills = [...new Set([...rssSkills, ...(detail?.skills || [])])];
+      // Then JSON-LD
+      if (!salary_min && detail?.salary_min) {
+        salary_min = detail.salary_min;
+        salary_max = detail.salary_max;
+        salary_currency = detail.salary_currency;
+      }
 
-      // Salary: prefer detail page, fall back to RSS parsing
-      let salary_min = detail?.salary_min || null;
-      let salary_max = detail?.salary_max || null;
-      let salary_currency = detail?.salary_currency || null;
+      // Then parsed from description HTML
+      if (!salary_min && parsed.salary) {
+        salary_min = parsed.salary.min;
+        salary_max = parsed.salary.max;
+        salary_currency = parsed.salary.currency;
+      }
+
+      // Final fallback: regex on RSS plain text
       if (!salary_min) {
         const plainText = $.text();
-        const salaryMatch = plainText.match(/\$\s?([\d,]+)\s*[-–—to]+\s*\$?\s*([\d,]+)/);
+        const salaryMatch = plainText.match(
+          /\$\s?([\d,]+)\s*[-–—to]+\s*\$?\s*([\d,]+)/
+        );
         if (salaryMatch) {
           salary_min = parseInt(salaryMatch[1].replace(/,/g, ""), 10);
           salary_max = parseInt(salaryMatch[2].replace(/,/g, ""), 10);
@@ -338,13 +423,48 @@ async function scrapeWeWorkRemotely() {
         }
       }
 
-      const urlPath = (item.link || "").split("/").filter(Boolean).pop() || item.link;
+      // Skills: merge RSS skills + parsed skills (deduplicated)
+      const rssSkills = item.skills
+        ? item.skills
+            .split(/,\s*and\s*|,\s*|\s+and\s+/)
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [];
+      const combinedSkills = [
+        ...new Set([...rssSkills, ...parsed.skills]),
+      ];
+
+      // Application deadline from sidebar
+      let application_deadline = null;
+      if (detail?.apply_before) {
+        try {
+          const d = new Date(detail.apply_before);
+          if (!isNaN(d.getTime())) application_deadline = d.toISOString();
+        } catch (e) {
+          // ignore
+        }
+      }
+      if (!application_deadline && detail?.jsonLd?.validThrough) {
+        try {
+          const d = new Date(detail.jsonLd.validThrough);
+          if (!isNaN(d.getTime())) application_deadline = d.toISOString();
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      const urlPath = (item.link || "")
+        .split("/")
+        .filter(Boolean)
+        .pop() || item.link;
 
       return {
         title: cleanTitle,
         source_url: item.link,
-        description,
-        posted_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
+        description: descriptionHtml,
+        posted_at: item.pubDate
+          ? new Date(item.pubDate).toISOString()
+          : null,
         external_job_id: urlPath,
         external_source: "WeWorkRemotely",
         source_type: "RSS",
@@ -356,23 +476,46 @@ async function scrapeWeWorkRemotely() {
         salary_max,
         salary_currency,
         job_type,
+        experience_level,
+        visa_sponsorship: parsed.visa_sponsorship || false,
         skills: combinedSkills.length > 0 ? combinedSkills : [],
-        requirements: detail?.requirements || [],
+        requirements: parsed.requirements.length > 0 ? parsed.requirements : [],
+        responsibilities:
+          parsed.responsibilities.length > 0 ? parsed.responsibilities : [],
+        benefits: parsed.benefits.length > 0 ? parsed.benefits : [],
+        summary: parsed.summary || null,
+        highlights:
+          parsed.highlights.length > 0 ? parsed.highlights : [],
+        required_qualifications:
+          parsed.required_qualifications.length > 0
+            ? parsed.required_qualifications
+            : [],
+        preferred_qualifications:
+          parsed.preferred_qualifications.length > 0
+            ? parsed.preferred_qualifications
+            : [],
+        application_deadline,
         company: {
           name: companyName,
           logo_url: detail?.company_logo || rssLogoImg,
           website: detail?.company_website || companyWebsite,
-          location: companyLocation || rssState || null,
+          location: detail?.company_location || companyLocation || rssState || null,
           description: detail?.company_description || null,
+          profile_url: detail?.company_profile_url || null,
         },
         categories: [],
       };
     });
 
-    console.log(`Scraped ${jobs.length} jobs from WeWorkRemotely (with detail pages)`);
+    console.log(
+      `Scraped ${jobs.length} jobs from WeWorkRemotely (with detail pages)`
+    );
     return jobs;
   } catch (err) {
-    console.error("Error scraping WeWorkRemotely detail pages:", err.message);
+    console.error(
+      "Error scraping WeWorkRemotely detail pages:",
+      err.message
+    );
     // Fall back to RSS-only data
     return rssItems.map((item) => {
       const rawTitle = item.title || "";
@@ -384,12 +527,17 @@ async function scrapeWeWorkRemotely() {
         companyName = rawTitle.substring(0, colonIdx).trim();
         cleanTitle = rawTitle.substring(colonIdx + 2).trim();
       }
-      const urlPath = (item.link || "").split("/").filter(Boolean).pop() || item.link;
+      const urlPath = (item.link || "")
+        .split("/")
+        .filter(Boolean)
+        .pop() || item.link;
       return {
         title: cleanTitle,
         source_url: item.link,
         description: item.description,
-        posted_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
+        posted_at: item.pubDate
+          ? new Date(item.pubDate).toISOString()
+          : null,
         external_job_id: urlPath,
         external_source: "WeWorkRemotely",
         source_type: "RSS",

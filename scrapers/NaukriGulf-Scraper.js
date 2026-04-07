@@ -1,6 +1,10 @@
 const playwright = require("playwright-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
-const { parseCountryCode } = require("../lib/descriptionParser");
+const {
+  parseDescription,
+  parseExperienceLevelFromTitle,
+  parseCountryCode,
+} = require("../lib/descriptionParser");
 
 playwright.chromium.use(StealthPlugin());
 
@@ -211,6 +215,9 @@ async function scrapeDetailPage(browser, url) {
     const salary = parseSalary(salaryStr);
     const urlPath = url.split("/").filter(Boolean).pop() || url;
 
+    // Parse structured fields from description HTML
+    const parsed = parseDescription(descriptionHtml);
+
     // Derive country_code from JSON-LD address or location text
     const addressCountry = jsonLd?.jobLocation?.address?.addressCountry || null;
     const country_code = parseCountryCode(addressCountry) || parseCountryCode(location) || "AE";
@@ -221,6 +228,11 @@ async function scrapeDetailPage(browser, url) {
       locationLower.includes("remote") ||
       locationLower.includes("work from home") ||
       (jsonLd?.jobLocationType || "").toUpperCase() === "TELECOMMUTE";
+
+    // Salary: structured > parsed from description
+    const salary_min = salary.min || (parsed.salary ? parsed.salary.min : null);
+    const salary_max = salary.max || (parsed.salary ? parsed.salary.max : null);
+    const salary_currency = salary.currency || (parsed.salary ? parsed.salary.currency : null);
 
     return {
       title,
@@ -234,12 +246,20 @@ async function scrapeDetailPage(browser, url) {
       is_remote,
       location,
       country_code,
-      job_type: mapJobType(jobTypeStr),
-      experience_level: parseExperienceToLevel(experienceStr),
-      salary_min: salary.min,
-      salary_max: salary.max,
-      salary_currency: salary.currency,
-      required_qualifications: reqQuals,
+      job_type: mapJobType(jobTypeStr) || parsed.job_type || null,
+      experience_level: parseExperienceToLevel(experienceStr) || parseExperienceLevelFromTitle(title) || parsed.experience_level || null,
+      salary_min,
+      salary_max,
+      salary_currency,
+      skills: parsed.skills.length > 0 ? parsed.skills : [],
+      requirements: parsed.requirements.length > 0 ? parsed.requirements : [],
+      responsibilities: parsed.responsibilities.length > 0 ? parsed.responsibilities : [],
+      benefits: parsed.benefits.length > 0 ? parsed.benefits : [],
+      summary: parsed.summary || null,
+      highlights: parsed.highlights.length > 0 ? parsed.highlights : [],
+      required_qualifications: reqQuals.length > 0 ? reqQuals : (parsed.required_qualifications.length > 0 ? parsed.required_qualifications : []),
+      preferred_qualifications: parsed.preferred_qualifications.length > 0 ? parsed.preferred_qualifications : [],
+      visa_sponsorship: parsed.visa_sponsorship || false,
       categories: [],
       company: {
         name: company,
