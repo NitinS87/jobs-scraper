@@ -1,5 +1,9 @@
 node_modules/
 .env
+.DS_Store
+package-lock.json
+
+# Job data files
 *_jobs.json
 jobs.json
 external_job_links.json
