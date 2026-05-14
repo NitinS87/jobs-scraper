@@ -23,6 +23,9 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium
