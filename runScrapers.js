@@ -16,6 +16,10 @@ const scrapers = [
   { name: 'YCombinator', fn: require('./scrapers/ycombinator') },
   { name: 'CutShort', fn: require('./scrapers/cutshort') },
   { name: 'NCS', fn: require('./scrapers/ncs') },
+  { name: 'GulfTalent', fn: require('./scrapers/gulftalent') },
+  { name: 'SourcingXpress', fn: require('./scrapers/sourcingxpress') },
+  { name: 'Cimix', fn: require('./scrapers/cimix') },
+  { name: 'WorkInDenmark', fn: require('./scrapers/workindenmark') },
   { name: 'Wellfound', fn: require('./scrapers/wellfound'), optional: true },
   { name: 'SimplyHiredIN', fn: require('./scrapers/simplyhired'), optional: true },
 ];

@@ -24,12 +24,14 @@ node runScrapers.js      # Run all scrapers + upload to Supabase
 
 Three approaches:
 1. **RSS/XML feeds** (axios + xml2js) — Jobicy, WeWorkRemotely, AVJobs, RealWorkFromAnywhere
-2. **Browser automation** (playwright) — TokyoDev, JobsInJapan, NaukriGulf, Wellfound (Tier C), SimplyHired (Tier C)
-3. **JSON APIs / SSR scrape** (axios + cheerio) — HNHiring (HN Algolia API), YCombinator (JobPosting JSON-LD), CutShort (Next.js __NEXT_DATA__), NCS (POST `/api/v1/job-posts/search`)
+2. **Browser automation** (playwright) — TokyoDev, JobsInJapan, NaukriGulf, WorkInDenmark, Wellfound (Tier C), SimplyHired (Tier C)
+3. **JSON APIs / SSR scrape** (axios + cheerio) — HNHiring (HN Algolia API), YCombinator (JobPosting JSON-LD), CutShort (Next.js __NEXT_DATA__), NCS (POST `/api/v1/job-posts/search`), GulfTalent (mobile-site JSON-LD), SourcingXpress (SSR HTML), Cimix (JSON-LD per category)
 
 WWR and RWFA scrape multiple RSS feed categories and deduplicate. Most scrapers fetch detail pages for richer data (JSON-LD, skills, salary, requirements). Company enrichment (website, location, description) is backfilled automatically by the uploader.
 
 `lib/scraperUtils.js` provides shared helpers: `delay`, `randomDelay`, `isCloudflareChallenge`, `withTimeout`, `fetchInBatches`, `launchStealthBrowser`. New scrapers use these; existing ones still inline their own copies (refactor pending).
+
+`lib/jobFilter.js` provides `isProfessionalRole(title)` and `isLikelyEnglish(title, description)`. The multi-vertical boards (GulfTalent, Cimix, WorkInDenmark) carry many non-tech / non-English listings, so those scrapers filter to tech + white-collar professional roles and English-only before/after detail fetch. Each of those four scrapers targets ~500 jobs/run, tunable via `GULFTALENT_MAX_JOBS` / `CIMIX_MAX_JOBS` / `WORKINDENMARK_MAX_JOBS` env vars.
 
 Each scraper exports an async function returning a standardized job array. No JSON files are written.
 
@@ -67,5 +69,9 @@ Use `pnpm` (not npm) for all dependency operations.
 - No test suite exists yet
 - Some scrapers need a working Chrome/Chromium install for Playwright
 - `.env` is gitignored — needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
-- NaukriGulf, TokyoDev, JobsInJapan, Wellfound, and SimplyHired use Playwright (run `pnpm exec playwright install chromium` if needed)
+- NaukriGulf, TokyoDev, JobsInJapan, WorkInDenmark, Wellfound, and SimplyHired use Playwright (run `pnpm exec playwright install chromium` if needed)
 - Each scraper run is wrapped in a 5-minute timeout in `runScrapers.js` to prevent a hung Playwright page from stalling the whole pipeline
+- **GulfTalent**: bare axios gets 403; full browser-like headers (Sec-Ch-Ua, Sec-Fetch-*) pass. The desktop `/jobs/search` is an AngularJS SPA — scrape the server-rendered **mobile** site `/mobile/search/jobs-in-_/all/{page}` (25 jobs/page) and its `/mobile/<country>/jobs/<slug>-<id>` detail pages (JSON-LD JobPosting). Country comes from the URL segment.
+- **Cimix**: Next.js RSC; `?page`/`?offset` are ignored, only `?categoryId=<id>` changes the result set (50 jobs/category). Iterate the tech/professional category IDs and dedupe. Detail pages have clean JSON-LD with English-translated titles and ISO `addressCountry`.
+- **SourcingXpress**: recruiter-sourcing SaaS — only ~10 public jobs at `/search` (no working pagination), no JSON-LD. Title/company/location parsed from `og:title` ("X position at Y in Z"); INR "Lacs/Cr" salaries handled in-scraper.
+- **WorkInDenmark**: Duende BFF. `/bff/FindJob/Search?resultsPerPage=100&pageNumber=N` returns full job records incl. full-HTML `description` — no detail pages needed. Requires the session cookie (set by loading `/find-job` in Playwright) **plus** the anti-forgery header `X-CSRF: 1`; without it the API returns 401. Call the API from page context via `page.evaluate(fetch(...))`.
