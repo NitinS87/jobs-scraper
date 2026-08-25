@@ -1,0 +1,78 @@
+name: Backfill Jobs
+
+# Manual-only. Normal 6-hourly runs pull a 7-day window (see lib/recency.js);
+# this workflow is how you pull deeper history or catch a source up after an
+# outage. It shares the `scrape-jobs` concurrency group so it can never run
+# alongside the cron and double-upsert the same rows.
+#
+# Note: GitHub caps a job at 6 hours. A full ~50k JobbSafari backfill will NOT
+# finish in one dispatch — run it repeatedly with `scraper: JobbSafari`, or run
+# `node runScrapers.js` locally with FULL_BACKFILL=true.
+
+on:
+  workflow_dispatch:
+    inputs:
+      scraper:
+        description: 'Scraper name (e.g. JobbSafari). Blank = all.'
+        required: false
+        type: string
+      full_backfill:
+        description: 'Ignore the recency window entirely'
+        type: boolean
+        default: true
+      recency_days:
+        description: 'Window in days (ignored when full_backfill is true)'
+        required: false
+        default: '90'
+      max_jobs:
+        description: 'Per-scraper cap, applied to every *_MAX_JOBS'
+        required: false
+        default: '20000'
+      timeout_minutes:
+        description: 'Job timeout in minutes (GitHub caps at 360)'
+        required: false
+        default: '330'
+
+concurrency:
+  group: scrape-jobs
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(inputs.timeout_minutes) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Run backfill
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SCRAPER_ONLY: ${{ inputs.scraper }}
+          FULL_BACKFILL: ${{ inputs.full_backfill }}
+          RECENCY_DAYS: ${{ inputs.recency_days }}
+          TEAL_MAX_JOBS: ${{ inputs.max_jobs }}
+          JOBSTAIRS_MAX_JOBS: ${{ inputs.max_jobs }}
+          ENGLISHJOBS_MAX_JOBS: ${{ inputs.max_jobs }}
+          FINN_MAX_JOBS: ${{ inputs.max_jobs }}
+          JOBBSAFARI_MAX_JOBS: ${{ inputs.max_jobs }}
+        run: node runScrapers.js

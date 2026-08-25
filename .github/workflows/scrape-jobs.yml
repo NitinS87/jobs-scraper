@@ -5,10 +5,22 @@ on:
     - cron: '0 */6 * * *' # Every 6 hours
   workflow_dispatch: # Manual trigger
 
+# A manual dispatch landing on top of a cron run would have two processes
+# upserting the same rows, and the read-then-write in processScraperResults is
+# not atomic. Backfill shares this group so the two can never overlap.
+concurrency:
+  group: scrape-jobs
+  cancel-in-progress: false
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Hard kill. RUN_BUDGET_MS (50 min) is the soft budget that lets the run exit
+    # cleanly with a summary before this fires. Measured: the 15 pre-existing
+    # scrapers alone take ~34 min, so the budget must clear that plus the five
+    # new sources. NOTE: on a private repo this is ~7,200 Actions min/month at
+    # 4 runs/day — well past the 2,000-min free tier.
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -35,4 +47,14 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Tunable from repo Variables without needing a commit.
+          # FULL_BACKFILL is deliberately absent: it must be impossible to
+          # trigger an unbounded crawl from the 6-hourly cron path.
+          RECENCY_DAYS: ${{ vars.RECENCY_DAYS || '7' }}
+          RUN_BUDGET_MS: ${{ vars.RUN_BUDGET_MS || '3000000' }}
+          TEAL_MAX_JOBS: ${{ vars.TEAL_MAX_JOBS || '500' }}
+          JOBSTAIRS_MAX_JOBS: ${{ vars.JOBSTAIRS_MAX_JOBS || '500' }}
+          ENGLISHJOBS_MAX_JOBS: ${{ vars.ENGLISHJOBS_MAX_JOBS || '400' }}
+          FINN_MAX_JOBS: ${{ vars.FINN_MAX_JOBS || '400' }}
+          JOBBSAFARI_MAX_JOBS: ${{ vars.JOBBSAFARI_MAX_JOBS || '400' }}
         run: node runScrapers.js
