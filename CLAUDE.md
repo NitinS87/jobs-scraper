@@ -141,6 +141,15 @@ the code is safe to deploy before the migration. Apply it to actually get the sa
 
 Use `pnpm` (not npm) for all dependency operations.
 
+## Deployment
+
+⚠️ **The GitHub default branch is `feature/job-scraper`, not `main`.** `main` exists but is stale
+and has no deploy role. `on: schedule` fires against the default branch, so **every push to
+`feature/job-scraper` is a production deploy** — the 6-hourly cron picks it up on the next run.
+Confirmed 2026-09-08 via `gh repo view --json defaultBranchRef` and `gh run list` (every scheduled
+run reports `headBranch: feature/job-scraper`). Do not reason about this from the branch *name*;
+check it. Merging to `main` deploys nothing.
+
 ## Gotchas
 
 - `pnpm test` runs `node:test` (no framework dep). `lib/uploadPlanner.js` is unit-tested;
