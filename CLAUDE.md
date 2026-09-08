@@ -124,11 +124,19 @@ therefore optimised for **request count**, not response size:
   reproducing the old `ilike()` semantics without a round-trip per company. Wide enrichment
   columns are fetched only for the companies a run actually touches.
 
-⚠️ **`sql/001_ingestion_perf.sql` is a prerequisite and is NOT applied yet.** Verified against the
-live project on 2026-09-08: `jobs.content_hash` returns `42703` (does not exist) and upserting on
-`(external_source, external_job_id)` returns `42P10` (no matching constraint). The uploader probes
-for both once per process and falls back to the old per-row path — correct, just as expensive — so
-the code is safe to deploy before the migration. Apply it to actually get the saving.
+**`sql/001_ingestion_perf.sql` was applied 2026-09-08** (Supabase migration
+`ingestion_perf_upsert_target_and_content_hash`): unique constraint on
+`(external_source, external_job_id)`, `jobs.content_hash`, and `companies (lower(name))`. The
+uploader still probes for all of it once per process and falls back to the old per-row path if
+absent, so the code stays deployable against a database without it.
+
+⚠️ **`posted_at` and `source_posted_at` are deliberately excluded from the content hash.**
+`sourcingxpress` and `englishjobs` resolve a relative date ("2 days ago") against the clock at
+scrape time, so the value drifts on *every* run — measured 9/9 rows drifting per run, which
+defeated no-op skipping entirely (`unchanged` stayed at 0). They are still written; they just do
+not on their own justify rewriting an 8.9 KB row, and for a relative date the first-observed value
+is closest to the true publication time. **Anything added to the hash must be deterministic across
+two consecutive scrapes** — verify with a double-scrape diff before adding a field.
 
 ## Dependencies
 

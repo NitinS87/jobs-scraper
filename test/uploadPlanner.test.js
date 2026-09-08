@@ -179,3 +179,32 @@ test('groupByKeySignature loses no records', () => {
 test('groupByKeySignature handles an empty input', () => {
   assert.deepEqual(groupByKeySignature([]), []);
 });
+
+test('contentHash ignores posted_at drift', () => {
+  // sourcingxpress and englishjobs derive posted_at from a relative date
+  // ("2 days ago") against the clock at scrape time, so it moves by
+  // milliseconds on every run. Hashing it made every row look changed forever
+  // and defeated no-op skipping entirely (measured: 9/9 rows drifting per run).
+  const a = { title: 'X', posted_at: '2026-09-07T04:45:59.281Z', source_posted_at: '2026-09-07T04:45:59.281Z' };
+  const b = { title: 'X', posted_at: '2026-09-07T04:46:04.121Z', source_posted_at: '2026-09-07T04:46:04.121Z' };
+  assert.equal(contentHash(a), contentHash(b));
+});
+
+test('contentHash ignores posted_at drift across days too', () => {
+  // A relative date re-resolved tomorrow lands a day later. Same noise.
+  const a = { title: 'X', posted_at: '2026-09-07T04:45:59.281Z' };
+  const b = { title: 'X', posted_at: '2026-09-08T04:45:59.281Z' };
+  assert.equal(contentHash(a), contentHash(b));
+});
+
+test('a real content change still updates even when the date also drifted', () => {
+  const stored = contentHash({ title: 'OLD', posted_at: '2026-09-07T04:45:59.281Z' });
+  const fresh = { title: 'NEW', posted_at: '2026-09-07T04:46:04.121Z' };
+  assert.equal(classifyJob({ existing: { id: 'j1', content_hash: stored }, record: fresh, hasContentHash: true }), 'update');
+});
+
+test('posted_at is still written even though it is not hashed', () => {
+  // Excluded from the hash, not from the payload.
+  const out = stripUnwritableOnUpdate({ title: 'X', posted_at: '2026-09-07T00:00:00.000Z' });
+  assert.equal(out.posted_at, '2026-09-07T00:00:00.000Z');
+});
