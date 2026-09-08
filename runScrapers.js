@@ -125,7 +125,8 @@ async function run() {
         `${name} upload`
       );
       console.log(
-        `${name}: inserted=${stats.inserted}, updated=${stats.updated}, errors=${stats.errors} `
+        `${name}: inserted=${stats.inserted}, updated=${stats.updated}, `
+        + `unchanged=${stats.unchanged || 0}, errors=${stats.errors} `
         + `(${mins(Date.now() - startedAt)} min total)`
       );
       summary.push({ name, status: 'ok', scraped: jobs.length, ...stats });

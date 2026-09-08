@@ -6,6 +6,7 @@ Collection of Node.js scrapers that pull job listings from various remote job bo
 
 ```bash
 pnpm install             # Install dependencies (requires Node.js)
+pnpm test                # Unit + integration tests (node:test, no network, no DB)
 node runScrapers.js      # Run all scrapers + upload to Supabase
 ```
 
@@ -15,7 +16,8 @@ node runScrapers.js      # Run all scrapers + upload to Supabase
 - `scrapers/` — Individual scraper modules, one per job board (each exports an async function returning standardized job arrays)
 - `lib/` — Shared modules:
   - `supabaseClient.js` — Supabase client init (service role key)
-  - `uploader.js` — Core DB integration (source, company, job upsert, category mapping)
+  - `uploader.js` — Core DB integration (source, company, job upsert, category mapping). Batched — see below
+  - `uploadPlanner.js` — Pure planning helpers for the uploader (content hashing, insert/update/skip classification, category diffing, key-signature grouping). No Supabase calls, so it is unit-testable
   - `categoryMatcher.js` — Maps job titles to 392 existing DB categories via keyword matching
   - `logoUploader.js` — Logo download + Supabase storage upload + favicon fallback
   - `descriptionParser.js` — Shared HTML parser for requirements/skills/salary/benefits extraction + `parseCountryCode()` + `parseSalaryText()`
@@ -95,6 +97,39 @@ These two are planned but not implemented; both need free registration:
 - **Dedup**: by `external_source` + `external_job_id`
 - `.env` requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
 
+### Batched ingestion (egress budget)
+
+`pg_stat_statements` over 2026-02-07 → 2026-09-08 showed ~2.7M REST requests, all returning
+exactly 1 row. Measured on the wire, ~2.2 GB of the ~3 GB egress was **HTTP response headers**
+(~1.0 KB/request, half of it Cloudflare's `__cf_bm` cookie) — not row payloads. The uploader is
+therefore optimised for **request count**, not response size:
+
+- **One batched upsert per source**, not one write per job. `writeJobBatch()` chunks at 500.
+- **Inserts and updates are separate batches on purpose.** An upsert carrying `is_active` would
+  resurrect every row the 90-day expiry job has deactivated (8,404 of 18,293 as of 2026-09-08).
+  `is_active` and `popular` are owned elsewhere and are stripped from updates.
+- **PostgREST bulk payloads must have uniform keys** (PGRST102). Updates drop `posted_at` only
+  when null, so batches are grouped by key signature before being sent.
+- **Never chain `.select()` on a write.** supabase-js only sends `Prefer: return=representation`
+  when you do (`postgrest-js/dist/index.cjs:566`); PostgREST otherwise defaults to
+  `return=minimal` and replies 204 with an empty body. A full `jobs` row is ~8,979 B, 66% of it
+  `description`.
+- **`content_hash` skips no-op rewrites.** The table had 713K write tuples against 18K live rows
+  (~39 rewrites) because the recency window re-scrapes the same week every 6h and rewrote
+  byte-identical rows. A null stored hash always means "update" — never skip.
+- **`job_category_mappings` has a composite PK `(job_id, category_id)`**, so mappings upsert with
+  `ignoreDuplicates` and only genuinely-dropped ids are deleted. The old blanket
+  DELETE-then-INSERT per job was ~880K calls.
+- **Companies are prefetched once per process** (`id, name` only, paged) into a `lower(name)` map,
+  reproducing the old `ilike()` semantics without a round-trip per company. Wide enrichment
+  columns are fetched only for the companies a run actually touches.
+
+⚠️ **`sql/001_ingestion_perf.sql` is a prerequisite and is NOT applied yet.** Verified against the
+live project on 2026-09-08: `jobs.content_hash` returns `42703` (does not exist) and upserting on
+`(external_source, external_job_id)` returns `42P10` (no matching constraint). The uploader probes
+for both once per process and falls back to the old per-row path — correct, just as expensive — so
+the code is safe to deploy before the migration. Apply it to actually get the saving.
+
 ## Dependencies
 
 - `@supabase/supabase-js` / `dotenv` — Supabase client + env config
@@ -108,7 +143,9 @@ Use `pnpm` (not npm) for all dependency operations.
 
 ## Gotchas
 
-- No test suite exists yet
+- `pnpm test` runs `node:test` (no framework dep). `lib/uploadPlanner.js` is unit-tested;
+  `test/uploader.integration.test.js` drives `processScraperResults` against a mock Supabase
+  client that counts requests, which is what pins the batching behaviour. Scrapers are untested
 - Some scrapers need a working Chrome/Chromium install for Playwright
 - `.env` is gitignored — needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
 - NaukriGulf, TokyoDev, JobsInJapan, WorkInDenmark, Wellfound, and SimplyHired use Playwright (run `pnpm exec playwright install chromium` if needed)

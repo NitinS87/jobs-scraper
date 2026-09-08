@@ -40,6 +40,11 @@ jobs:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
         run: pnpm install --frozen-lockfile
 
+      # Cheap, no network, no DB. Guards the uploader's batching logic, which
+      # is what keeps the run inside the Supabase egress budget.
+      - name: Run tests
+        run: pnpm test
+
       - name: Install Playwright Chromium
         run: pnpm exec playwright install chromium --with-deps
 
