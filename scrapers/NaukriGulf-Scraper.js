@@ -308,10 +308,19 @@ async function scrapeNaukriGulf() {
 
     const listingPage = await context.newPage();
     const allJobUrls = [];
-    let currentUrl = START_URL;
+
+    // One pagination pass per vertical. With the flag off START_URLS is just
+    // the software-engineer listing, so this is byte-identical to the previous
+    // single-URL behaviour.
+    const perVertical = Math.max(1, Math.ceil(MAX_JOBS / START_URLS.length));
+
+    for (const startUrl of START_URLS) {
+      if (allJobUrls.length >= MAX_JOBS) break;
+      const verticalBudget = Math.min(MAX_JOBS, allJobUrls.length + perVertical);
+      let currentUrl = startUrl;
 
     // Pagination: collect job URLs from listing pages
-    while (currentUrl && allJobUrls.length < MAX_JOBS) {
+    while (currentUrl && allJobUrls.length < verticalBudget) {
       await listingPage.goto(currentUrl, {
         waitUntil: "domcontentloaded",
         timeout: 30000,
@@ -351,7 +360,7 @@ async function scrapeNaukriGulf() {
       });
 
       for (const u of pageUrls) {
-        if (allJobUrls.length >= MAX_JOBS) break;
+        if (allJobUrls.length >= verticalBudget) break;
         if (!allJobUrls.includes(u)) {
           allJobUrls.push(u);
         }
@@ -371,6 +380,11 @@ async function scrapeNaukriGulf() {
           return href.startsWith("http") ? href : `${BASE_URL}${href}`;
         })
         .catch(() => null);
+    }
+
+      console.log(
+        `NaukriGulf: ${startUrl.split('/').pop().split('?')[0]} → ${allJobUrls.length} URLs total`
+      );
     }
 
     await listingPage.close();

@@ -48,7 +48,9 @@ const BOARDS = {
   jobsinjapan: {
     slices: ['software', 'sales', 'marketing', 'finance', 'designer', 'engineer', 'teacher'],
     url: (s) => `https://jobsinjapan.com/?s=${encodeURIComponent(s)}&post_type=noo_job`,
-    count: (html) => (html.match(/\/job\//g) || []).length,
+    // Cards are `.loop-item-title a`, per scrapers/jobsinjapan.js:79 — counting
+    // bare /job/ links matched nothing and looked like an empty board.
+    count: (html) => (html.match(/loop-item-title/g) || []).length,
     playwright: true,
     // This board 403s a burst. Probe with the scraper's own pacing: the gate to
     // enable verticals is "N sequential searches all returned results", not
@@ -86,8 +88,9 @@ async function probePlaywright(board) {
   const results = [];
   let browser;
   try {
-    browser = await launchStealthBrowser();
-    const context = await browser.newContext({ userAgent: UA });
+    // launchStealthBrowser returns { browser, context } — NOT a raw browser.
+    ({ browser } = await launchStealthBrowser({ contextOptions: { userAgent: UA } }));
+    const context = browser.contexts()[0] || await browser.newContext({ userAgent: UA });
     const page = await context.newPage();
 
     for (const slice of board.slices) {
@@ -109,9 +112,13 @@ async function probePlaywright(board) {
       await sleep(board.delayMs);
     }
   } catch (err) {
-    console.error(`probe: browser failed to launch: ${err.message}`);
+    console.error(`probe: browser failed: ${err.message}`);
   } finally {
-    if (browser) await browser.close().catch(() => {});
+    try {
+      if (browser && typeof browser.close === 'function') await browser.close();
+    } catch (err) {
+      console.warn(`probe: browser close failed: ${err.message}`);
+    }
   }
   return results;
 }
@@ -158,4 +165,11 @@ async function main() {
   }
 }
 
-main().catch((err) => console.error(err.message));
+main()
+  .catch((err) => {
+    console.error(err.message);
+  })
+  // A leaked browser handle keeps the event loop alive and the CI job hangs
+  // until its timeout, which reports as "cancelled" and looks like a site
+  // problem rather than a script bug. Exit explicitly.
+  .finally(() => process.exit(0));
