@@ -69,28 +69,51 @@ async function scrapeJobsInJapan() {
   const page = await context.newPage();
 
   try {
-    await page.goto(START_URL, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector("div.job-content-wrap");
-
-    const listings = await page.$$("div.job-content-wrap");
     const listingData = [];
+    const seenLinks = new Set();
 
-    for (const card of listings) {
-      const titleEl = await card.$(".loop-item-title a");
-      const companyEl = await card.$(".company-name");
-      const locationEl = await card.$(".job-location");
+    // One search per vertical. With the flag off START_URLS is just the
+    // software search, so this is byte-identical to the previous behaviour.
+    // The board 403s a burst, so the searches are paced like the detail fetches.
+    for (const startUrl of START_URLS) {
+      try {
+        await page.goto(startUrl, { waitUntil: "domcontentloaded" });
+        await page.waitForSelector("div.job-content-wrap", { timeout: 15000 });
+      } catch (err) {
+        console.warn(`JobsInJapan: search failed ${startUrl}: ${err.message}`);
+        continue;
+      }
 
-      const jobTitle = titleEl ? await titleEl.innerText() : "";
-      const jobLink = titleEl ? await titleEl.getAttribute("href") : "";
-      const companyName = companyEl ? await companyEl.innerText() : "";
-      const location = locationEl ? await locationEl.innerText() : "";
+      const listings = await page.$$("div.job-content-wrap");
+      let added = 0;
 
-      listingData.push({
-        jobTitle: jobTitle.trim(),
-        jobLink: (jobLink || "").trim(),
-        companyName: companyName.trim(),
-        location: location.trim(),
-      });
+      for (const card of listings) {
+        const titleEl = await card.$(".loop-item-title a");
+        const companyEl = await card.$(".company-name");
+        const locationEl = await card.$(".job-location");
+
+        const jobTitle = titleEl ? await titleEl.innerText() : "";
+        const jobLink = titleEl ? await titleEl.getAttribute("href") : "";
+        const companyName = companyEl ? await companyEl.innerText() : "";
+        const location = locationEl ? await locationEl.innerText() : "";
+
+        const link = (jobLink || "").trim();
+        if (!link || seenLinks.has(link)) continue;
+        seenLinks.add(link);
+        added += 1;
+
+        listingData.push({
+          jobTitle: jobTitle.trim(),
+          jobLink: link,
+          companyName: companyName.trim(),
+          location: location.trim(),
+        });
+      }
+
+      console.log(
+        `JobsInJapan: ${decodeURIComponent((startUrl.match(/[?&]s=([^&]*)/) || [])[1] || "?")} → ${listings.length} cards (${added} new)`
+      );
+      if (START_URLS.length > 1) await randomDelay(2000, 4000);
     }
 
     const results = [];
