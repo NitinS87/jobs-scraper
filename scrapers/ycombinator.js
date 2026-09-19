@@ -18,6 +18,10 @@ const LISTING_URLS = [
   `${BASE}/jobs/role/product-manager`,
   `${BASE}/jobs/role/marketing`,
   `${BASE}/jobs/role/data-science`,
+  // Present in the live /jobs nav 2026-09-18 but never configured here.
+  `${BASE}/jobs/role/recruiting-hr`,
+  `${BASE}/jobs/role/support`,
+  `${BASE}/jobs/role/science`,
 ];
 const DETAIL_BATCH_SIZE = 5;
 const REQUEST_TIMEOUT = 30000;

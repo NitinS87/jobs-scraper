@@ -6,6 +6,7 @@ const {
 const { launchStealthBrowser, delay } = require('../lib/scraperUtils');
 const { isProfessionalRole, isLikelyEnglish } = require('../lib/jobFilter');
 const { recencyApiDays, getRecencyConfig } = require('../lib/recency');
+const { activeSlices } = require('../lib/verticals');
 
 // Teal (tealhq.com) exposes an unauthenticated JSON:API behind its job portal at
 // resume-public.service.tealhq.com/public (found as VITE_JOB_SEARCH_API_URL in
@@ -46,6 +47,13 @@ const SOFT_DEADLINE_MS = Number(process.env.TEAL_DEADLINE_MS) || 3.5 * 60 * 1000
 
 // Keyword slices, each capped at 10k by the API. Chosen to cover the tech and
 // white-collar roles the platform targets rather than the whole board.
+// Ordered tech-first: the per-query budget truncates the tail, and this board
+// must not regress on Software/Internet/AI volume.
+//
+// Terms are taxonomy-accurate rather than colloquial. Healthcare's leaves are
+// Clinical Research Associate, Regulatory Affairs Specialist, Biomedical
+// Engineer, Toxicologist — there is no nursing leaf anywhere in the 392 nodes,
+// so querying `nurse` would fetch rows the classifier then discards.
 const QUERIES = [
   'software engineer',
   'developer',
@@ -61,7 +69,49 @@ const QUERIES = [
   'operations',
   'human resources',
   'customer success',
+  'accountant',
+  'attorney',
+  'paralegal',
+  'consultant',
+  'supply chain',
+  'mechanical engineer',
+  'electrical engineer',
+  'clinical research',
+  'regulatory affairs',
+  'policy analyst',
+  'environmental engineer',
+  'technical writer',
+  'project manager',
+  'professor',
 ];
+
+// Each query is a full paging pass, so this is the board most sensitive to
+// slice count. Queries are grouped by taxonomy root; only the roots active in
+// this run's rotation are fetched (lib/verticals.js).
+const SLICE_MAP = {
+  'software-internet-ai': ['software engineer', 'developer', 'data', 'devops', 'security engineer'],
+  product: ['product manager'],
+  'creative-design': ['designer'],
+  marketing: ['marketing'],
+  sales: ['sales'],
+  finance: ['finance', 'analyst'],
+  accounting: ['accountant'],
+  'human-resource-administrative-legal': ['human resources'],
+  'legal-services': ['attorney', 'paralegal'],
+  'customer-service': ['customer success'],
+  consulting: ['consultant'],
+  'logistics-supply-chain': ['supply chain', 'operations'],
+  'production-manufacturing': ['mechanical engineer'],
+  'electrical-engineering': ['electrical engineer'],
+  healthcare: ['clinical research', 'regulatory affairs'],
+  'education-and-training': ['professor'],
+  'public-sector-and-government': ['policy analyst'],
+  'energy-environmental': ['environmental engineer'],
+  'real-estate-architecture': ['architect'],
+};
+
+// Tail queries cost a full paging pass each, so cap how many run per invocation.
+const MAX_QUERIES = Number(process.env.TEAL_MAX_QUERIES) || 14;
 
 function mapEmploymentType(list) {
   const v = String((Array.isArray(list) ? list[0] : list) || '')
@@ -130,7 +180,7 @@ async function collectCandidates(page, deadline) {
   const seen = new Map();
   let titleFiltered = 0;
 
-  for (const query of QUERIES) {
+  for (const query of activeQueries) {
     if (seen.size >= MAX_JOBS || Date.now() > deadline) break;
 
     for (let p = 1; p <= MAX_PAGES_PER_QUERY && seen.size < MAX_JOBS; p++) {
@@ -243,12 +293,16 @@ function buildJob(id, listing, a) {
 
 async function scrapeTeal() {
   const cfg = getRecencyConfig('Teal');
+  const { slices, roots } = activeSlices('Teal', SLICE_MAP);
+  // Fall back to the full list if the rotation yields nothing for this board.
+  const activeQueries = (slices.length ? slices : QUERIES).slice(0, MAX_QUERIES);
+  console.log(`Teal: active roots [${roots.join(', ')}]`);
   const deadline = Date.now() + SOFT_DEADLINE_MS;
   const { browser, context } = await launchStealthBrowser();
   const page = await context.newPage();
 
   try {
-    console.log(`Teal: collecting candidates across ${QUERIES.length} query slices (window=${cfg.label})...`);
+    console.log(`Teal: collecting candidates across ${activeQueries.length} query slices (window=${cfg.label})...`);
 
     // Land on the API origin once; every later fetch is then same-origin.
     const resp = await page.goto(`${API_ORIGIN}/public/job_posts?page=1&per_page=1`, {
@@ -305,3 +359,4 @@ async function scrapeTeal() {
 }
 
 module.exports = scrapeTeal;
+module.exports.SLICE_MAP = SLICE_MAP;

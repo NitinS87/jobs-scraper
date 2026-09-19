@@ -8,6 +8,7 @@ const {
 } = require('../lib/descriptionParser');
 const { fetchInBatches } = require('../lib/scraperUtils');
 const { isProfessionalRole, isLikelyEnglish } = require('../lib/jobFilter');
+const { activeSlices } = require('../lib/verticals');
 
 // Cimix is a Nordic job board (Sweden/Denmark/Norway/Finland). The listing is a
 // Next.js RSC page that shows 50 jobs per category and ignores ?page; the only
@@ -27,6 +28,16 @@ const CATEGORIES = [
   'category_scientific_work_018',
   'category_culture_media_design_020',
   'category_education_013',
+  // The site exposes 20 category ids; these five map onto taxonomy roots that
+  // were previously empty or thin (Real Estate/Architecture, Healthcare,
+  // Production/Manufacturing, Electrical Engineering, Energy/Environmental).
+  // Deliberately still excluded: beauty, crafts, hotel/restaurant, sanitation,
+  // security, social work and transport — none has a home in the 392 nodes.
+  'category_construction_civil_001',
+  'category_healthcare_003',
+  'category_industrial_production_007',
+  'category_installation_operation_maintenance_009',
+  'category_sustainable_agriculture_019',
 ];
 
 const MAX_JOBS = Number(process.env.CIMIX_MAX_JOBS) || 500;
@@ -74,9 +85,34 @@ function buildLocation(ld) {
   return { text: [...new Set(segs)].join(', ') || null, country: addr.addressCountry || null };
 }
 
+// Category ids grouped by taxonomy root; only the roots active in this run's
+// rotation are fetched (lib/verticals.js). Each category is a separate listing
+// plus detail-page pass, so slice count is real cost here.
+const SLICE_MAP = {
+  'software-internet-ai': ['category_manual_it_006'],
+  'human-resource-administrative-legal': ['category_administration_finance_law_010'],
+  accounting: ['category_administration_finance_law_010'],
+  finance: ['category_administration_finance_law_010'],
+  'legal-services': ['category_administration_finance_law_010'],
+  consulting: ['category_managers_executives_011'],
+  sales: ['category_sales_procurement_marketing_012'],
+  marketing: ['category_sales_procurement_marketing_012'],
+  'logistics-supply-chain': ['category_sales_procurement_marketing_012'],
+  'electrical-engineering': ['category_technical_work_017', 'category_installation_operation_maintenance_009'],
+  healthcare: ['category_scientific_work_018', 'category_healthcare_003'],
+  'creative-design': ['category_culture_media_design_020'],
+  'education-and-training': ['category_education_013'],
+  'real-estate-architecture': ['category_construction_civil_001'],
+  'production-manufacturing': ['category_industrial_production_007'],
+  'energy-environmental': ['category_sustainable_agriculture_019'],
+};
+
 async function collectJobIds() {
   const ids = new Set();
-  for (const cat of CATEGORIES) {
+  const { slices, roots } = activeSlices('Cimix', SLICE_MAP);
+  const categories = slices.length ? slices : CATEGORIES;
+  console.log(`Cimix: ${categories.length} categories across roots [${roots.join(', ')}]`);
+  for (const cat of categories) {
     if (ids.size >= MAX_JOBS) break;
     try {
       const { data } = await axios.get(LISTING_URL(cat), {
@@ -178,3 +214,4 @@ async function scrapeCimix() {
 }
 
 module.exports = scrapeCimix;
+module.exports.SLICE_MAP = SLICE_MAP;

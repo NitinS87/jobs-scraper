@@ -6,14 +6,29 @@ const {
   parseExperienceLevelFromTitle,
   parseCountryCode,
 } = require("../lib/descriptionParser");
+const { reportSliceHealth } = require("../lib/scraperUtils");
 
-const FEED_URLS = [
-  "https://www.realworkfromanywhere.com/remote-developer-jobs/rss.xml",
-  "https://www.realworkfromanywhere.com/remote-design-jobs/rss.xml",
-  "https://www.realworkfromanywhere.com/remote-marketing-jobs/rss.xml",
-  "https://www.realworkfromanywhere.com/remote-data-jobs/rss.xml",
-  "https://www.realworkfromanywhere.com/remote-devops-jobs/rss.xml",
+// Verified live 2026-09-18. Four of the five slugs previously configured here
+// (remote-developer, remote-marketing, remote-data, remote-devops) returned
+// HTTP 404 — only remote-design worked, so this board had been contributing
+// design jobs only. The per-feed catch below logged a warning that nobody read;
+// see reportSliceHealth at the end of the loop.
+const FEED_SLUGS = [
+  "software-developer",
+  "backend",
+  "frontend",
+  "fullstack",
+  "devops-and-sysadmin",
+  "design",
+  "product",
+  "sales-and-marketing",
+  "management-and-finance",
+  "customer-support",
 ];
+
+const FEED_URLS = FEED_SLUGS.map(
+  (slug) => `https://www.realworkfromanywhere.com/remote-${slug}-jobs/rss.xml`,
+);
 
 const DETAIL_FETCH_DELAY = 500;
 const DETAIL_FETCH_TIMEOUT = 10000;
@@ -175,8 +190,10 @@ async function scrapeRealWorkFromAnywhere() {
   // Fetch all feeds, collecting items and deduplicating by link URL
   const seenLinks = new Set();
   const items = [];
+  const sliceHealth = [];
 
   for (const feedUrl of FEED_URLS) {
+    const slug = feedUrl.split("/").slice(-2, -1)[0];
     try {
       const response = await axios.get(feedUrl, {
         timeout: 15000,
@@ -197,11 +214,15 @@ async function scrapeRealWorkFromAnywhere() {
         }
       }
 
-      console.log(`RWFA feed ${feedUrl.split("/").slice(-2, -1)[0]}: ${feedItems.length} items (${addedCount} new)`);
+      sliceHealth.push({ slice: slug, items: feedItems.length });
+      console.log(`RWFA feed ${slug}: ${feedItems.length} items (${addedCount} new)`);
     } catch (err) {
+      sliceHealth.push({ slice: slug, items: 0 });
       console.warn(`Failed to fetch RWFA feed ${feedUrl}: ${err.message}`);
     }
   }
+
+  reportSliceHealth("RealWorkFromAnywhere", sliceHealth);
 
   if (items.length === 0) {
     console.log("No jobs found in RealWorkFromAnywhere feeds");

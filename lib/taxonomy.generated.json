@@ -1,0 +1,2681 @@
+{
+  "generatedAt": "2026-09-18",
+  "counts": {
+    "nodes": 392,
+    "roots": 19,
+    "groups": 85,
+    "leaves": 288
+  },
+  "roots": [
+    {
+      "id": "00000000-0000-4000-8000-000800000000",
+      "name": "Accounting"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000d00000000",
+      "name": "Consulting"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900000000",
+      "name": "Creative & Design"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000500000000",
+      "name": "Customer Service"
+    },
+    {
+      "id": "00000000-0000-4000-8000-001000000000",
+      "name": "Education and Training"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200000000",
+      "name": "Electrical Engineering"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000f00000000",
+      "name": "Energy/Environmental"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00000000",
+      "name": "Finance"
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200000000",
+      "name": "Healthcare"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700000000",
+      "name": "Human Resource/Administrative/Legal"
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100000000",
+      "name": "Legal Services"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000c00000000",
+      "name": "Logistics/Supply Chain"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00000000",
+      "name": "Marketing"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000400000000",
+      "name": "Product"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300000000",
+      "name": "Production/Manufacturing"
+    },
+    {
+      "id": "00000000-0000-4000-8000-001300000000",
+      "name": "Public Sector and Government"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000a00000000",
+      "name": "Real Estate/Architecture"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600000000",
+      "name": "Sales"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100000000",
+      "name": "Software/Internet/AI"
+    }
+  ],
+  "leaves": [
+    {
+      "id": "00000000-0000-4000-8000-000800010001",
+      "name": "Accountant",
+      "groupId": "00000000-0000-4000-8000-000800010000",
+      "group": "Accounting (Accounting)",
+      "rootId": "00000000-0000-4000-8000-000800000000",
+      "root": "Accounting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000800010002",
+      "name": "Controller",
+      "groupId": "00000000-0000-4000-8000-000800010000",
+      "group": "Accounting (Accounting)",
+      "rootId": "00000000-0000-4000-8000-000800000000",
+      "root": "Accounting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000800020002",
+      "name": "Auditor",
+      "groupId": "00000000-0000-4000-8000-000800020000",
+      "group": "Tax and Audit",
+      "rootId": "00000000-0000-4000-8000-000800000000",
+      "root": "Accounting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000800020001",
+      "name": "Tax Specialist",
+      "groupId": "00000000-0000-4000-8000-000800020000",
+      "group": "Tax and Audit",
+      "rootId": "00000000-0000-4000-8000-000800000000",
+      "root": "Accounting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000d00020001",
+      "name": "Business Strategy Consultant",
+      "groupId": "00000000-0000-4000-8000-000d00020000",
+      "group": "Business Strategy & Management Consulting",
+      "rootId": "00000000-0000-4000-8000-000d00000000",
+      "root": "Consulting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000d00020003",
+      "name": "Change Management Consultant",
+      "groupId": "00000000-0000-4000-8000-000d00020000",
+      "group": "Business Strategy & Management Consulting",
+      "rootId": "00000000-0000-4000-8000-000d00000000",
+      "root": "Consulting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000d00020002",
+      "name": "Market Research Analyst",
+      "groupId": "00000000-0000-4000-8000-000d00020000",
+      "group": "Business Strategy & Management Consulting",
+      "rootId": "00000000-0000-4000-8000-000d00000000",
+      "root": "Consulting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000d00020004",
+      "name": "Operations Consultant",
+      "groupId": "00000000-0000-4000-8000-000d00020000",
+      "group": "Business Strategy & Management Consulting",
+      "rootId": "00000000-0000-4000-8000-000d00000000",
+      "root": "Consulting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000d00030001",
+      "name": "Financial Consultant",
+      "groupId": "00000000-0000-4000-8000-000d00030000",
+      "group": "Financial Advisory",
+      "rootId": "00000000-0000-4000-8000-000d00000000",
+      "root": "Consulting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000d00030003",
+      "name": "Mergers & Acquisitions (M&A) Consultant",
+      "groupId": "00000000-0000-4000-8000-000d00030000",
+      "group": "Financial Advisory",
+      "rootId": "00000000-0000-4000-8000-000d00000000",
+      "root": "Consulting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000d00030002",
+      "name": "Risk Management Consultant",
+      "groupId": "00000000-0000-4000-8000-000d00030000",
+      "group": "Financial Advisory",
+      "rootId": "00000000-0000-4000-8000-000d00000000",
+      "root": "Consulting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000d00010002",
+      "name": "Business Analyst",
+      "groupId": "00000000-0000-4000-8000-000d00010000",
+      "group": "IT Consulting",
+      "rootId": "00000000-0000-4000-8000-000d00000000",
+      "root": "Consulting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000d00010004",
+      "name": "Cyber Security Consultant",
+      "groupId": "00000000-0000-4000-8000-000d00010000",
+      "group": "IT Consulting",
+      "rootId": "00000000-0000-4000-8000-000d00000000",
+      "root": "Consulting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000d00010003",
+      "name": "Data Consultant",
+      "groupId": "00000000-0000-4000-8000-000d00010000",
+      "group": "IT Consulting",
+      "rootId": "00000000-0000-4000-8000-000d00000000",
+      "root": "Consulting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000d00010001",
+      "name": "IT Consultant",
+      "groupId": "00000000-0000-4000-8000-000d00010000",
+      "group": "IT Consulting",
+      "rootId": "00000000-0000-4000-8000-000d00000000",
+      "root": "Consulting",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900020001",
+      "name": "3D Designer",
+      "groupId": "00000000-0000-4000-8000-000900020000",
+      "group": "Art/3D/Animation",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900020002",
+      "name": "Animator",
+      "groupId": "00000000-0000-4000-8000-000900020000",
+      "group": "Art/3D/Animation",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900020005",
+      "name": "Creative/Art Director",
+      "groupId": "00000000-0000-4000-8000-000900020000",
+      "group": "Art/3D/Animation",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900020003",
+      "name": "Illustrator",
+      "groupId": "00000000-0000-4000-8000-000900020000",
+      "group": "Art/3D/Animation",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900020006",
+      "name": "Motion Designer",
+      "groupId": "00000000-0000-4000-8000-000900020000",
+      "group": "Art/3D/Animation",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900020004",
+      "name": "Video Editor",
+      "groupId": "00000000-0000-4000-8000-000900020000",
+      "group": "Art/3D/Animation",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900030001",
+      "name": "Interior Designer",
+      "groupId": "00000000-0000-4000-8000-000900030000",
+      "group": "Environmental Design",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900030002",
+      "name": "Landscape Designer",
+      "groupId": "00000000-0000-4000-8000-000900030000",
+      "group": "Environmental Design",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900040001",
+      "name": "Industrial Designer",
+      "groupId": "00000000-0000-4000-8000-000900040000",
+      "group": "Industrial Design",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900010001",
+      "name": "Graphic Designer",
+      "groupId": "00000000-0000-4000-8000-000900010000",
+      "group": "UI/UX Design",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900010002",
+      "name": "UI Designer",
+      "groupId": "00000000-0000-4000-8000-000900010000",
+      "group": "UI/UX Design",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900010003",
+      "name": "UX Designer",
+      "groupId": "00000000-0000-4000-8000-000900010000",
+      "group": "UI/UX Design",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000900010004",
+      "name": "UX Researcher",
+      "groupId": "00000000-0000-4000-8000-000900010000",
+      "group": "UI/UX Design",
+      "rootId": "00000000-0000-4000-8000-000900000000",
+      "root": "Creative & Design",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000500010002",
+      "name": "Customer Service Manager",
+      "groupId": "00000000-0000-4000-8000-000500010000",
+      "group": "Customer Service (Customer Service)",
+      "rootId": "00000000-0000-4000-8000-000500000000",
+      "root": "Customer Service",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000500010001",
+      "name": "Customer Service Representative",
+      "groupId": "00000000-0000-4000-8000-000500010000",
+      "group": "Customer Service (Customer Service)",
+      "rootId": "00000000-0000-4000-8000-000500000000",
+      "root": "Customer Service",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000500030001",
+      "name": "Customer Success (Customer Success)",
+      "groupId": "00000000-0000-4000-8000-000500030000",
+      "group": "Customer Success (Customer Service)",
+      "rootId": "00000000-0000-4000-8000-000500000000",
+      "root": "Customer Service",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000500020001",
+      "name": "Customer Support (Customer Support)",
+      "groupId": "00000000-0000-4000-8000-000500020000",
+      "group": "Customer Support (Customer Service)",
+      "rootId": "00000000-0000-4000-8000-000500000000",
+      "root": "Customer Service",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001000010002",
+      "name": "Higher Education Teaching",
+      "groupId": "00000000-0000-4000-8000-001000010000",
+      "group": "Academic Teaching",
+      "rootId": "00000000-0000-4000-8000-001000000000",
+      "root": "Education and Training",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001000010001",
+      "name": "K-12 Teaching",
+      "groupId": "00000000-0000-4000-8000-001000010000",
+      "group": "Academic Teaching",
+      "rootId": "00000000-0000-4000-8000-001000000000",
+      "root": "Education and Training",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001000020001",
+      "name": "Corporate Training and Development (Corporate Training and Development)",
+      "groupId": "00000000-0000-4000-8000-001000020000",
+      "group": "Corporate Training and Development (Education and Training)",
+      "rootId": "00000000-0000-4000-8000-001000000000",
+      "root": "Education and Training",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001000030002",
+      "name": "Academic Dean",
+      "groupId": "00000000-0000-4000-8000-001000030000",
+      "group": "Educational Administration (Education and Training)",
+      "rootId": "00000000-0000-4000-8000-001000000000",
+      "root": "Education and Training",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001000030001",
+      "name": "Educational Administration (Educational Administration)",
+      "groupId": "00000000-0000-4000-8000-001000030000",
+      "group": "Educational Administration (Education and Training)",
+      "rootId": "00000000-0000-4000-8000-001000000000",
+      "root": "Education and Training",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200080001",
+      "name": "Aerospace Engineer",
+      "groupId": "00000000-0000-4000-8000-000200080000",
+      "group": "Aerospace Engineering",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200030002",
+      "name": "Automation Engineer",
+      "groupId": "00000000-0000-4000-8000-000200030000",
+      "group": "Electrical & Automation",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200030005",
+      "name": "Controls Engineer",
+      "groupId": "00000000-0000-4000-8000-000200030000",
+      "group": "Electrical & Automation",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200030001",
+      "name": "Electrical Engineer",
+      "groupId": "00000000-0000-4000-8000-000200030000",
+      "group": "Electrical & Automation",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200030003",
+      "name": "Electromechanical Engineer",
+      "groupId": "00000000-0000-4000-8000-000200030000",
+      "group": "Electrical & Automation",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200030004",
+      "name": "Robotics Engineer",
+      "groupId": "00000000-0000-4000-8000-000200030000",
+      "group": "Electrical & Automation",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200070001",
+      "name": "Battery Engineer",
+      "groupId": "00000000-0000-4000-8000-000200070000",
+      "group": "Electrical Vehicles",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200070002",
+      "name": "Motor Engineer",
+      "groupId": "00000000-0000-4000-8000-000200070000",
+      "group": "Electrical Vehicles",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200010004",
+      "name": "ASIC Engineer",
+      "groupId": "00000000-0000-4000-8000-000200010000",
+      "group": "Electronics & Hardware",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200010001",
+      "name": "Electronics Engineer",
+      "groupId": "00000000-0000-4000-8000-000200010000",
+      "group": "Electronics & Hardware",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200010003",
+      "name": "Embedded Software Engineer",
+      "groupId": "00000000-0000-4000-8000-000200010000",
+      "group": "Electronics & Hardware",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200010005",
+      "name": "FPGA Engineer",
+      "groupId": "00000000-0000-4000-8000-000200010000",
+      "group": "Electronics & Hardware",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200010002",
+      "name": "Hardware Engineer",
+      "groupId": "00000000-0000-4000-8000-000200010000",
+      "group": "Electronics & Hardware",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200010007",
+      "name": "PCB Engineer",
+      "groupId": "00000000-0000-4000-8000-000200010000",
+      "group": "Electronics & Hardware",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200010006",
+      "name": "RF (Radio Frequency) Engineer",
+      "groupId": "00000000-0000-4000-8000-000200010000",
+      "group": "Electronics & Hardware",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200010008",
+      "name": "Systems Integration Engineer",
+      "groupId": "00000000-0000-4000-8000-000200010000",
+      "group": "Electronics & Hardware",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200090001",
+      "name": "Sales Engineer (Sales & Technical Support)",
+      "groupId": "00000000-0000-4000-8000-000200090000",
+      "group": "Sales & Technical Support",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200090002",
+      "name": "Solutions Architect",
+      "groupId": "00000000-0000-4000-8000-000200090000",
+      "group": "Sales & Technical Support",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200020003",
+      "name": "Analog IC Design Engineer",
+      "groupId": "00000000-0000-4000-8000-000200020000",
+      "group": "Semiconductors & Chips",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200020002",
+      "name": "Digital IC Verification Engineer",
+      "groupId": "00000000-0000-4000-8000-000200020000",
+      "group": "Semiconductors & Chips",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200020001",
+      "name": "IC Design Engineer",
+      "groupId": "00000000-0000-4000-8000-000200020000",
+      "group": "Semiconductors & Chips",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200050001",
+      "name": "Project/Program Manager (Technical Project Management)",
+      "groupId": "00000000-0000-4000-8000-000200050000",
+      "group": "Technical Project Management (Electrical Engineering)",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200060002",
+      "name": "Network Engineer (Telecommunications)",
+      "groupId": "00000000-0000-4000-8000-000200060000",
+      "group": "Telecommunications",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200060001",
+      "name": "Telecommunications Engineer",
+      "groupId": "00000000-0000-4000-8000-000200060000",
+      "group": "Telecommunications",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200060003",
+      "name": "Wireless/Antenna Engineer",
+      "groupId": "00000000-0000-4000-8000-000200060000",
+      "group": "Telecommunications",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200040001",
+      "name": "Electrical Test Engineer",
+      "groupId": "00000000-0000-4000-8000-000200040000",
+      "group": "Testing (Electrical Engineering)",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000200040002",
+      "name": "Hardware Test Engineer",
+      "groupId": "00000000-0000-4000-8000-000200040000",
+      "group": "Testing (Electrical Engineering)",
+      "rootId": "00000000-0000-4000-8000-000200000000",
+      "root": "Electrical Engineering",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000f00010001",
+      "name": "Energy Engineer",
+      "groupId": "00000000-0000-4000-8000-000f00010000",
+      "group": "Energy Engineering",
+      "rootId": "00000000-0000-4000-8000-000f00000000",
+      "root": "Energy/Environmental",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000f00010003",
+      "name": "Nuclear Engineer",
+      "groupId": "00000000-0000-4000-8000-000f00010000",
+      "group": "Energy Engineering",
+      "rootId": "00000000-0000-4000-8000-000f00000000",
+      "root": "Energy/Environmental",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000f00010004",
+      "name": "Power Systems Engineer",
+      "groupId": "00000000-0000-4000-8000-000f00010000",
+      "group": "Energy Engineering",
+      "rootId": "00000000-0000-4000-8000-000f00000000",
+      "root": "Energy/Environmental",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000f00010002",
+      "name": "Renewable Energy Engineer",
+      "groupId": "00000000-0000-4000-8000-000f00010000",
+      "group": "Energy Engineering",
+      "rootId": "00000000-0000-4000-8000-000f00000000",
+      "root": "Energy/Environmental",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000f00020001",
+      "name": "Environmental Engineer",
+      "groupId": "00000000-0000-4000-8000-000f00020000",
+      "group": "Environmental Engineering",
+      "rootId": "00000000-0000-4000-8000-000f00000000",
+      "root": "Energy/Environmental",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000f00020002",
+      "name": "Environmental Scientist",
+      "groupId": "00000000-0000-4000-8000-000f00020000",
+      "group": "Environmental Engineering",
+      "rootId": "00000000-0000-4000-8000-000f00000000",
+      "root": "Energy/Environmental",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00030001",
+      "name": "Commercial Banker",
+      "groupId": "00000000-0000-4000-8000-000e00030000",
+      "group": "Banking",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00030003",
+      "name": "Credit Analyst",
+      "groupId": "00000000-0000-4000-8000-000e00030000",
+      "group": "Banking",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00030002",
+      "name": "Investment Banker",
+      "groupId": "00000000-0000-4000-8000-000e00030000",
+      "group": "Banking",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00030004",
+      "name": "Loan Officer",
+      "groupId": "00000000-0000-4000-8000-000e00030000",
+      "group": "Banking",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00010001",
+      "name": "Corporate Finance Analyst",
+      "groupId": "00000000-0000-4000-8000-000e00010000",
+      "group": "Corporate Finance",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00010002",
+      "name": "Treasury",
+      "groupId": "00000000-0000-4000-8000-000e00010000",
+      "group": "Corporate Finance",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00050001",
+      "name": "Actuary",
+      "groupId": "00000000-0000-4000-8000-000e00050000",
+      "group": "Insurance",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00050002",
+      "name": "Underwriter",
+      "groupId": "00000000-0000-4000-8000-000e00050000",
+      "group": "Insurance",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00020007",
+      "name": "Asset Manager",
+      "groupId": "00000000-0000-4000-8000-000e00020000",
+      "group": "Investment/Financing",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00020006",
+      "name": "Equity Analyst",
+      "groupId": "00000000-0000-4000-8000-000e00020000",
+      "group": "Investment/Financing",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00020001",
+      "name": "Financial Analyst",
+      "groupId": "00000000-0000-4000-8000-000e00020000",
+      "group": "Investment/Financing",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00020005",
+      "name": "Investment Manager",
+      "groupId": "00000000-0000-4000-8000-000e00020000",
+      "group": "Investment/Financing",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00020008",
+      "name": "Portfolio Manager",
+      "groupId": "00000000-0000-4000-8000-000e00020000",
+      "group": "Investment/Financing",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00020004",
+      "name": "Quantitative Analyst/Researcher",
+      "groupId": "00000000-0000-4000-8000-000e00020000",
+      "group": "Investment/Financing",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00020002",
+      "name": "Risk Analyst (Investment/Financing)",
+      "groupId": "00000000-0000-4000-8000-000e00020000",
+      "group": "Investment/Financing",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00020003",
+      "name": "Securities Trader",
+      "groupId": "00000000-0000-4000-8000-000e00020000",
+      "group": "Investment/Financing",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00040005",
+      "name": "Fundraising Manager",
+      "groupId": "00000000-0000-4000-8000-000e00040000",
+      "group": "VC/PE",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00040001",
+      "name": "Investment Analyst/Associate",
+      "groupId": "00000000-0000-4000-8000-000e00040000",
+      "group": "VC/PE",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00040002",
+      "name": "Investment Direct/VP",
+      "groupId": "00000000-0000-4000-8000-000e00040000",
+      "group": "VC/PE",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00040003",
+      "name": "Investment Partner",
+      "groupId": "00000000-0000-4000-8000-000e00040000",
+      "group": "VC/PE",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00040006",
+      "name": "Investor Relations Manager",
+      "groupId": "00000000-0000-4000-8000-000e00040000",
+      "group": "VC/PE",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000e00040004",
+      "name": "Portfolio Operations Manager",
+      "groupId": "00000000-0000-4000-8000-000e00040000",
+      "group": "VC/PE",
+      "rootId": "00000000-0000-4000-8000-000e00000000",
+      "root": "Finance",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200020001",
+      "name": "Biomedical Engineer",
+      "groupId": "00000000-0000-4000-8000-001200020000",
+      "group": "Biomedical Engineering & Technology",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200020003",
+      "name": "Biomedical Equipment Technician",
+      "groupId": "00000000-0000-4000-8000-001200020000",
+      "group": "Biomedical Engineering & Technology",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200020002",
+      "name": "Clinical Engineer",
+      "groupId": "00000000-0000-4000-8000-001200020000",
+      "group": "Biomedical Engineering & Technology",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200040003",
+      "name": "Biostatistician",
+      "groupId": "00000000-0000-4000-8000-001200040000",
+      "group": "Clinical & Regulatory",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200040002",
+      "name": "Clinical Research Associate",
+      "groupId": "00000000-0000-4000-8000-001200040000",
+      "group": "Clinical & Regulatory",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200040001",
+      "name": "Clinical Research Scientist",
+      "groupId": "00000000-0000-4000-8000-001200040000",
+      "group": "Clinical & Regulatory",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200040005",
+      "name": "Medical Writer",
+      "groupId": "00000000-0000-4000-8000-001200040000",
+      "group": "Clinical & Regulatory",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200040004",
+      "name": "Regulatory Affairs Specialist",
+      "groupId": "00000000-0000-4000-8000-001200040000",
+      "group": "Clinical & Regulatory",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200030004",
+      "name": "Biochemist",
+      "groupId": "00000000-0000-4000-8000-001200030000",
+      "group": "Drug Discovery & Development",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200030001",
+      "name": "Biologist",
+      "groupId": "00000000-0000-4000-8000-001200030000",
+      "group": "Drug Discovery & Development",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200030003",
+      "name": "Chemist",
+      "groupId": "00000000-0000-4000-8000-001200030000",
+      "group": "Drug Discovery & Development",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200030007",
+      "name": "DMPK Scientist",
+      "groupId": "00000000-0000-4000-8000-001200030000",
+      "group": "Drug Discovery & Development",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200030005",
+      "name": "Formulation Scientist",
+      "groupId": "00000000-0000-4000-8000-001200030000",
+      "group": "Drug Discovery & Development",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200030002",
+      "name": "Pharmacologist",
+      "groupId": "00000000-0000-4000-8000-001200030000",
+      "group": "Drug Discovery & Development",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200030006",
+      "name": "Toxicologist",
+      "groupId": "00000000-0000-4000-8000-001200030000",
+      "group": "Drug Discovery & Development",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200050002",
+      "name": "Clinical Operations Manager",
+      "groupId": "00000000-0000-4000-8000-001200050000",
+      "group": "Health Product & Operations Management",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200050001",
+      "name": "Health Product Manager",
+      "groupId": "00000000-0000-4000-8000-001200050000",
+      "group": "Health Product & Operations Management",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200050003",
+      "name": "Healthcare Compliance Manager",
+      "groupId": "00000000-0000-4000-8000-001200050000",
+      "group": "Health Product & Operations Management",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200050004",
+      "name": "Healthcare Quality Improvement Specialist",
+      "groupId": "00000000-0000-4000-8000-001200050000",
+      "group": "Health Product & Operations Management",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200010004",
+      "name": "EHR (Electronic Health Records) System Administrator",
+      "groupId": "00000000-0000-4000-8000-001200010000",
+      "group": "Healthcare IT",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200010001",
+      "name": "Healthcare Data Analyst",
+      "groupId": "00000000-0000-4000-8000-001200010000",
+      "group": "Healthcare IT",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200010002",
+      "name": "Healthcare Data Scientist",
+      "groupId": "00000000-0000-4000-8000-001200010000",
+      "group": "Healthcare IT",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001200010003",
+      "name": "Healthcare IT Specialist",
+      "groupId": "00000000-0000-4000-8000-001200010000",
+      "group": "Healthcare IT",
+      "rootId": "00000000-0000-4000-8000-001200000000",
+      "root": "Healthcare",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700020001",
+      "name": "Administrative Assistant",
+      "groupId": "00000000-0000-4000-8000-000700020000",
+      "group": "Executive and Administrative",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700020003",
+      "name": "Chief of Staff",
+      "groupId": "00000000-0000-4000-8000-000700020000",
+      "group": "Executive and Administrative",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700020006",
+      "name": "Data Entry Clerk",
+      "groupId": "00000000-0000-4000-8000-000700020000",
+      "group": "Executive and Administrative",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700020002",
+      "name": "Executive Assistant",
+      "groupId": "00000000-0000-4000-8000-000700020000",
+      "group": "Executive and Administrative",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700020004",
+      "name": "Office Manager",
+      "groupId": "00000000-0000-4000-8000-000700020000",
+      "group": "Executive and Administrative",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700020005",
+      "name": "Receptionist",
+      "groupId": "00000000-0000-4000-8000-000700020000",
+      "group": "Executive and Administrative",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700010005",
+      "name": "HR Business Partner",
+      "groupId": "00000000-0000-4000-8000-000700010000",
+      "group": "Human Resource",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700010006",
+      "name": "Human Resource Manager/Director",
+      "groupId": "00000000-0000-4000-8000-000700010000",
+      "group": "Human Resource",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700010001",
+      "name": "Human Resource Specialist",
+      "groupId": "00000000-0000-4000-8000-000700010000",
+      "group": "Human Resource",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700010004",
+      "name": "Payroll Specialist",
+      "groupId": "00000000-0000-4000-8000-000700010000",
+      "group": "Human Resource",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700010002",
+      "name": "Recruiter/Sourcer",
+      "groupId": "00000000-0000-4000-8000-000700010000",
+      "group": "Human Resource",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700010003",
+      "name": "Recruiting Coordinator",
+      "groupId": "00000000-0000-4000-8000-000700010000",
+      "group": "Human Resource",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700030001",
+      "name": "Corporate Counsel",
+      "groupId": "00000000-0000-4000-8000-000700030000",
+      "group": "Legal",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000700030002",
+      "name": "Paralegal (Legal)",
+      "groupId": "00000000-0000-4000-8000-000700030000",
+      "group": "Legal",
+      "rootId": "00000000-0000-4000-8000-000700000000",
+      "root": "Human Resource/Administrative/Legal",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100030001",
+      "name": "Compliance Specialist",
+      "groupId": "00000000-0000-4000-8000-001100030000",
+      "group": "Compliance & Risk Management",
+      "rootId": "00000000-0000-4000-8000-001100000000",
+      "root": "Legal Services",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100030002",
+      "name": "Risk Analyst (Compliance & Risk Management)",
+      "groupId": "00000000-0000-4000-8000-001100030000",
+      "group": "Compliance & Risk Management",
+      "rootId": "00000000-0000-4000-8000-001100000000",
+      "root": "Legal Services",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100040002",
+      "name": "Case Manager",
+      "groupId": "00000000-0000-4000-8000-001100040000",
+      "group": "Legal Operations & Administration",
+      "rootId": "00000000-0000-4000-8000-001100000000",
+      "root": "Legal Services",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100040001",
+      "name": "Court Clerk",
+      "groupId": "00000000-0000-4000-8000-001100040000",
+      "group": "Legal Operations & Administration",
+      "rootId": "00000000-0000-4000-8000-001100000000",
+      "root": "Legal Services",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100040003",
+      "name": "Legal Operations Manager",
+      "groupId": "00000000-0000-4000-8000-001100040000",
+      "group": "Legal Operations & Administration",
+      "rootId": "00000000-0000-4000-8000-001100000000",
+      "root": "Legal Services",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100020003",
+      "name": "Criminal Lawyer",
+      "groupId": "00000000-0000-4000-8000-001100020000",
+      "group": "Legal Practice",
+      "rootId": "00000000-0000-4000-8000-001100000000",
+      "root": "Legal Services",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100020004",
+      "name": "Family Lawyer",
+      "groupId": "00000000-0000-4000-8000-001100020000",
+      "group": "Legal Practice",
+      "rootId": "00000000-0000-4000-8000-001100000000",
+      "root": "Legal Services",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100020005",
+      "name": "Immigration Lawyer",
+      "groupId": "00000000-0000-4000-8000-001100020000",
+      "group": "Legal Practice",
+      "rootId": "00000000-0000-4000-8000-001100000000",
+      "root": "Legal Services",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100020002",
+      "name": "Intellectual Property Lawyer",
+      "groupId": "00000000-0000-4000-8000-001100020000",
+      "group": "Legal Practice",
+      "rootId": "00000000-0000-4000-8000-001100000000",
+      "root": "Legal Services",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100020001",
+      "name": "Litigation Lawyer",
+      "groupId": "00000000-0000-4000-8000-001100020000",
+      "group": "Legal Practice",
+      "rootId": "00000000-0000-4000-8000-001100000000",
+      "root": "Legal Services",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100010002",
+      "name": "Legal Assistant",
+      "groupId": "00000000-0000-4000-8000-001100010000",
+      "group": "Paralegals & Legal Support",
+      "rootId": "00000000-0000-4000-8000-001100000000",
+      "root": "Legal Services",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001100010001",
+      "name": "Paralegal (Paralegals & Legal Support)",
+      "groupId": "00000000-0000-4000-8000-001100010000",
+      "group": "Paralegals & Legal Support",
+      "rootId": "00000000-0000-4000-8000-001100000000",
+      "root": "Legal Services",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000c00020003",
+      "name": "Distribution Center Manager",
+      "groupId": "00000000-0000-4000-8000-000c00020000",
+      "group": "Logistics Operations",
+      "rootId": "00000000-0000-4000-8000-000c00000000",
+      "root": "Logistics/Supply Chain",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000c00020001",
+      "name": "Logistics Manager",
+      "groupId": "00000000-0000-4000-8000-000c00020000",
+      "group": "Logistics Operations",
+      "rootId": "00000000-0000-4000-8000-000c00000000",
+      "root": "Logistics/Supply Chain",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000c00020002",
+      "name": "Warehouse Manager",
+      "groupId": "00000000-0000-4000-8000-000c00020000",
+      "group": "Logistics Operations",
+      "rootId": "00000000-0000-4000-8000-000c00000000",
+      "root": "Logistics/Supply Chain",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000c00030002",
+      "name": "Facilities Manager",
+      "groupId": "00000000-0000-4000-8000-000c00030000",
+      "group": "Procurement and Facilities",
+      "rootId": "00000000-0000-4000-8000-000c00000000",
+      "root": "Logistics/Supply Chain",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000c00030001",
+      "name": "Procurement Manager",
+      "groupId": "00000000-0000-4000-8000-000c00030000",
+      "group": "Procurement and Facilities",
+      "rootId": "00000000-0000-4000-8000-000c00000000",
+      "root": "Logistics/Supply Chain",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000c00010002",
+      "name": "Inventory Manager",
+      "groupId": "00000000-0000-4000-8000-000c00010000",
+      "group": "Supply Chain Management",
+      "rootId": "00000000-0000-4000-8000-000c00000000",
+      "root": "Logistics/Supply Chain",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000c00010001",
+      "name": "Supply Chain Manager",
+      "groupId": "00000000-0000-4000-8000-000c00010000",
+      "group": "Supply Chain Management",
+      "rootId": "00000000-0000-4000-8000-000c00000000",
+      "root": "Logistics/Supply Chain",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00030001",
+      "name": "Brand Manager",
+      "groupId": "00000000-0000-4000-8000-000b00030000",
+      "group": "Brand and Communications Marketing",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00030003",
+      "name": "Community Manager",
+      "groupId": "00000000-0000-4000-8000-000b00030000",
+      "group": "Brand and Communications Marketing",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00030004",
+      "name": "Event Marketing Specialist",
+      "groupId": "00000000-0000-4000-8000-000b00030000",
+      "group": "Brand and Communications Marketing",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00030002",
+      "name": "Public Relations",
+      "groupId": "00000000-0000-4000-8000-000b00030000",
+      "group": "Brand and Communications Marketing",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00040002",
+      "name": "Advertising Specialist",
+      "groupId": "00000000-0000-4000-8000-000b00040000",
+      "group": "Growth Marketing (Marketing)",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00040001",
+      "name": "Growth Marketing (Growth Marketing)",
+      "groupId": "00000000-0000-4000-8000-000b00040000",
+      "group": "Growth Marketing (Marketing)",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00040003",
+      "name": "Performance Marketing",
+      "groupId": "00000000-0000-4000-8000-000b00040000",
+      "group": "Growth Marketing (Marketing)",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00050002",
+      "name": "Email Marketing",
+      "groupId": "00000000-0000-4000-8000-000b00050000",
+      "group": "Lifecycle and Email Marketing",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00050001",
+      "name": "Lifecycle Marketing",
+      "groupId": "00000000-0000-4000-8000-000b00050000",
+      "group": "Lifecycle and Email Marketing",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00020001",
+      "name": "Product Marketing (Product Marketing)",
+      "groupId": "00000000-0000-4000-8000-000b00020000",
+      "group": "Product Marketing (Marketing)",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00010001",
+      "name": "Content Marketing/Strategy",
+      "groupId": "00000000-0000-4000-8000-000b00010000",
+      "group": "SEO and Content Marketing",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00010004",
+      "name": "Copywriter",
+      "groupId": "00000000-0000-4000-8000-000b00010000",
+      "group": "SEO and Content Marketing",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00010002",
+      "name": "SEO",
+      "groupId": "00000000-0000-4000-8000-000b00010000",
+      "group": "SEO and Content Marketing",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000b00010003",
+      "name": "Social Media Management",
+      "groupId": "00000000-0000-4000-8000-000b00010000",
+      "group": "SEO and Content Marketing",
+      "rootId": "00000000-0000-4000-8000-000b00000000",
+      "root": "Marketing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000400010008",
+      "name": "AI Product Manager",
+      "groupId": "00000000-0000-4000-8000-000400010000",
+      "group": "Product Management",
+      "rootId": "00000000-0000-4000-8000-000400000000",
+      "root": "Product",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000400010009",
+      "name": "Game Designer",
+      "groupId": "00000000-0000-4000-8000-000400010000",
+      "group": "Product Management",
+      "rootId": "00000000-0000-4000-8000-000400000000",
+      "root": "Product",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000400010001",
+      "name": "Product Analyst",
+      "groupId": "00000000-0000-4000-8000-000400010000",
+      "group": "Product Management",
+      "rootId": "00000000-0000-4000-8000-000400000000",
+      "root": "Product",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000400010002",
+      "name": "Product Manager",
+      "groupId": "00000000-0000-4000-8000-000400010000",
+      "group": "Product Management",
+      "rootId": "00000000-0000-4000-8000-000400000000",
+      "root": "Product",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000400010006",
+      "name": "Product Manager, B2B/SaaS",
+      "groupId": "00000000-0000-4000-8000-000400010000",
+      "group": "Product Management",
+      "rootId": "00000000-0000-4000-8000-000400000000",
+      "root": "Product",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000400010005",
+      "name": "Product Manager, Consumer Software",
+      "groupId": "00000000-0000-4000-8000-000400010000",
+      "group": "Product Management",
+      "rootId": "00000000-0000-4000-8000-000400000000",
+      "root": "Product",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000400010007",
+      "name": "Product Manager, Hardware/Robotics/IoT",
+      "groupId": "00000000-0000-4000-8000-000400010000",
+      "group": "Product Management",
+      "rootId": "00000000-0000-4000-8000-000400000000",
+      "root": "Product",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000400010003",
+      "name": "Technical Product Manager",
+      "groupId": "00000000-0000-4000-8000-000400010000",
+      "group": "Product Management",
+      "rootId": "00000000-0000-4000-8000-000400000000",
+      "root": "Product",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300040001",
+      "name": "Automotive Engineer",
+      "groupId": "00000000-0000-4000-8000-000300040000",
+      "group": "Automotive R&D & Manufacturing",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300040003",
+      "name": "Autonomous Driving System Engineer",
+      "groupId": "00000000-0000-4000-8000-000300040000",
+      "group": "Automotive R&D & Manufacturing",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300040002",
+      "name": "Powertrain Engineer",
+      "groupId": "00000000-0000-4000-8000-000300040000",
+      "group": "Automotive R&D & Manufacturing",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300030001",
+      "name": "Chemical Engineer",
+      "groupId": "00000000-0000-4000-8000-000300030000",
+      "group": "Chemical Engineering",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300030002",
+      "name": "Laboratory Technician",
+      "groupId": "00000000-0000-4000-8000-000300030000",
+      "group": "Chemical Engineering",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300060001",
+      "name": "EHS (Environment, Health, Safety) Engineer",
+      "groupId": "00000000-0000-4000-8000-000300060000",
+      "group": "Environmental Protection",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300010004",
+      "name": "Industrial Engineer",
+      "groupId": "00000000-0000-4000-8000-000300010000",
+      "group": "Mechanical Design & Manufacturing",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300010002",
+      "name": "Manufacturing Engineer",
+      "groupId": "00000000-0000-4000-8000-000300010000",
+      "group": "Mechanical Design & Manufacturing",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300010001",
+      "name": "Mechanical Engineer",
+      "groupId": "00000000-0000-4000-8000-000300010000",
+      "group": "Mechanical Design & Manufacturing",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300010005",
+      "name": "Mechatronics Engineer",
+      "groupId": "00000000-0000-4000-8000-000300010000",
+      "group": "Mechanical Design & Manufacturing",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300010003",
+      "name": "Process Engineer",
+      "groupId": "00000000-0000-4000-8000-000300010000",
+      "group": "Mechanical Design & Manufacturing",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300020001",
+      "name": "Operations Manager/Director",
+      "groupId": "00000000-0000-4000-8000-000300020000",
+      "group": "Operations & Safety",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300020002",
+      "name": "Safety Engineer",
+      "groupId": "00000000-0000-4000-8000-000300020000",
+      "group": "Operations & Safety",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300050001",
+      "name": "Quality Assurance Specialist",
+      "groupId": "00000000-0000-4000-8000-000300050000",
+      "group": "Quality Management",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000300070001",
+      "name": "Project/Program Manager (Production/Manufacturing > Technical Project Management)",
+      "groupId": "00000000-0000-4000-8000-000300070000",
+      "group": "Technical Project Management (Production/Manufacturing)",
+      "rootId": "00000000-0000-4000-8000-000300000000",
+      "root": "Production/Manufacturing",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001300030002",
+      "name": "Fundraising Coordinator",
+      "groupId": "00000000-0000-4000-8000-001300030000",
+      "group": "Non-profit",
+      "rootId": "00000000-0000-4000-8000-001300000000",
+      "root": "Public Sector and Government",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001300030001",
+      "name": "Program Manager",
+      "groupId": "00000000-0000-4000-8000-001300030000",
+      "group": "Non-profit",
+      "rootId": "00000000-0000-4000-8000-001300000000",
+      "root": "Public Sector and Government",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001300030003",
+      "name": "Volunteer Coordinator",
+      "groupId": "00000000-0000-4000-8000-001300030000",
+      "group": "Non-profit",
+      "rootId": "00000000-0000-4000-8000-001300000000",
+      "root": "Public Sector and Government",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001300020001",
+      "name": "Policy Analyst",
+      "groupId": "00000000-0000-4000-8000-001300020000",
+      "group": "Policy and Planning",
+      "rootId": "00000000-0000-4000-8000-001300000000",
+      "root": "Public Sector and Government",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-001300010001",
+      "name": "Government Relations Manager",
+      "groupId": "00000000-0000-4000-8000-001300010000",
+      "group": "Public Administration",
+      "rootId": "00000000-0000-4000-8000-001300000000",
+      "root": "Public Sector and Government",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000a00020001",
+      "name": "Architect",
+      "groupId": "00000000-0000-4000-8000-000a00020000",
+      "group": "Architecture",
+      "rootId": "00000000-0000-4000-8000-000a00000000",
+      "root": "Real Estate/Architecture",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000a00020002",
+      "name": "Landscape Architect",
+      "groupId": "00000000-0000-4000-8000-000a00020000",
+      "group": "Architecture",
+      "rootId": "00000000-0000-4000-8000-000a00000000",
+      "root": "Real Estate/Architecture",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000a00020003",
+      "name": "Urban Planner",
+      "groupId": "00000000-0000-4000-8000-000a00020000",
+      "group": "Architecture",
+      "rootId": "00000000-0000-4000-8000-000a00000000",
+      "root": "Real Estate/Architecture",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000a00030002",
+      "name": "Civil Engineer",
+      "groupId": "00000000-0000-4000-8000-000a00030000",
+      "group": "Construction",
+      "rootId": "00000000-0000-4000-8000-000a00000000",
+      "root": "Real Estate/Architecture",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000a00030001",
+      "name": "Construction Project Manager",
+      "groupId": "00000000-0000-4000-8000-000a00030000",
+      "group": "Construction",
+      "rootId": "00000000-0000-4000-8000-000a00000000",
+      "root": "Real Estate/Architecture",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000a00030003",
+      "name": "Structural Engineer",
+      "groupId": "00000000-0000-4000-8000-000a00030000",
+      "group": "Construction",
+      "rootId": "00000000-0000-4000-8000-000a00000000",
+      "root": "Real Estate/Architecture",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000a00010001",
+      "name": "Leasing Consultant",
+      "groupId": "00000000-0000-4000-8000-000a00010000",
+      "group": "Real Estate",
+      "rootId": "00000000-0000-4000-8000-000a00000000",
+      "root": "Real Estate/Architecture",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000a00010002",
+      "name": "Property Manager",
+      "groupId": "00000000-0000-4000-8000-000a00010000",
+      "group": "Real Estate",
+      "rootId": "00000000-0000-4000-8000-000a00000000",
+      "root": "Real Estate/Architecture",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600060001",
+      "name": "Automotive Sales (Automotive Sales)",
+      "groupId": "00000000-0000-4000-8000-000600060000",
+      "group": "Automotive Sales (Sales)",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600030001",
+      "name": "Business Development (Business Development)",
+      "groupId": "00000000-0000-4000-8000-000600030000",
+      "group": "Business Development (Sales)",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600030002",
+      "name": "Partnership",
+      "groupId": "00000000-0000-4000-8000-000600030000",
+      "group": "Business Development (Sales)",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-0006000a0001",
+      "name": "Financial Advisor",
+      "groupId": "00000000-0000-4000-8000-0006000a0000",
+      "group": "Financial Sales",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-0006000a0002",
+      "name": "Insurance Sales",
+      "groupId": "00000000-0000-4000-8000-0006000a0000",
+      "group": "Financial Sales",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600010003",
+      "name": "Account Executive, SMB",
+      "groupId": "00000000-0000-4000-8000-000600010000",
+      "group": "Inside Sales",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600010002",
+      "name": "Inside Sales Representative",
+      "groupId": "00000000-0000-4000-8000-000600010000",
+      "group": "Inside Sales",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600010001",
+      "name": "Sales Development Representative",
+      "groupId": "00000000-0000-4000-8000-000600010000",
+      "group": "Inside Sales",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600090002",
+      "name": "Medical Device Sales",
+      "groupId": "00000000-0000-4000-8000-000600090000",
+      "group": "Medical Sales (Sales)",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600090001",
+      "name": "Medical Sales (Medical Sales)",
+      "groupId": "00000000-0000-4000-8000-000600090000",
+      "group": "Medical Sales (Sales)",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600020003",
+      "name": "Channel Sales",
+      "groupId": "00000000-0000-4000-8000-000600020000",
+      "group": "Outside Sales",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600020002",
+      "name": "Enterprise Sales",
+      "groupId": "00000000-0000-4000-8000-000600020000",
+      "group": "Outside Sales",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600020001",
+      "name": "Field Sales Representative",
+      "groupId": "00000000-0000-4000-8000-000600020000",
+      "group": "Outside Sales",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600070002",
+      "name": "Leasing Manager",
+      "groupId": "00000000-0000-4000-8000-000600070000",
+      "group": "Real Estate Sales/Leasing",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600070001",
+      "name": "Real Estate Sales",
+      "groupId": "00000000-0000-4000-8000-000600070000",
+      "group": "Real Estate Sales/Leasing",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600080001",
+      "name": "Retail Sales (Retail Sales)",
+      "groupId": "00000000-0000-4000-8000-000600080000",
+      "group": "Retail Sales (Sales)",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600080002",
+      "name": "Store Manager",
+      "groupId": "00000000-0000-4000-8000-000600080000",
+      "group": "Retail Sales (Sales)",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600040002",
+      "name": "Regional Sales Manager",
+      "groupId": "00000000-0000-4000-8000-000600040000",
+      "group": "Sales Management",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600040003",
+      "name": "Sales Director/VP",
+      "groupId": "00000000-0000-4000-8000-000600040000",
+      "group": "Sales Management",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000600040001",
+      "name": "Sales Manager",
+      "groupId": "00000000-0000-4000-8000-000600040000",
+      "group": "Sales Management",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-0006000b0002",
+      "name": "Sales Operations Specialist",
+      "groupId": "00000000-0000-4000-8000-0006000b0000",
+      "group": "Sales Operations",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-0006000b0001",
+      "name": "Sales Support",
+      "groupId": "00000000-0000-4000-8000-0006000b0000",
+      "group": "Sales Operations",
+      "rootId": "00000000-0000-4000-8000-000600000000",
+      "root": "Sales",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100010004",
+      "name": ".Net Engineer",
+      "groupId": "00000000-0000-4000-8000-000100010000",
+      "group": "Backend Engineering",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100010001",
+      "name": "Backend Engineer",
+      "groupId": "00000000-0000-4000-8000-000100010000",
+      "group": "Backend Engineering",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100010009",
+      "name": "Blockchain Engineer",
+      "groupId": "00000000-0000-4000-8000-000100010000",
+      "group": "Backend Engineering",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100010005",
+      "name": "C/C++ Engineer",
+      "groupId": "00000000-0000-4000-8000-000100010000",
+      "group": "Backend Engineering",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100010007",
+      "name": "Full Stack Engineer",
+      "groupId": "00000000-0000-4000-8000-000100010000",
+      "group": "Backend Engineering",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100010006",
+      "name": "Golang Engineer",
+      "groupId": "00000000-0000-4000-8000-000100010000",
+      "group": "Backend Engineering",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100010002",
+      "name": "Java Engineer",
+      "groupId": "00000000-0000-4000-8000-000100010000",
+      "group": "Backend Engineering",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100010003",
+      "name": "Python Engineer",
+      "groupId": "00000000-0000-4000-8000-000100010000",
+      "group": "Backend Engineering",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-00010001000a",
+      "name": "Salesforce Developer",
+      "groupId": "00000000-0000-4000-8000-000100010000",
+      "group": "Backend Engineering",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100080006",
+      "name": "Business/BI Analyst",
+      "groupId": "00000000-0000-4000-8000-000100080000",
+      "group": "Data & Analytics",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100080001",
+      "name": "Data Analyst",
+      "groupId": "00000000-0000-4000-8000-000100080000",
+      "group": "Data & Analytics",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100080003",
+      "name": "Data Engineer",
+      "groupId": "00000000-0000-4000-8000-000100080000",
+      "group": "Data & Analytics",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100080002",
+      "name": "Data Scientist",
+      "groupId": "00000000-0000-4000-8000-000100080000",
+      "group": "Data & Analytics",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100080005",
+      "name": "Data Warehouse Engineer",
+      "groupId": "00000000-0000-4000-8000-000100080000",
+      "group": "Data & Analytics",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100080004",
+      "name": "ETL Developer",
+      "groupId": "00000000-0000-4000-8000-000100080000",
+      "group": "Data & Analytics",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100080007",
+      "name": "Power BI Developer",
+      "groupId": "00000000-0000-4000-8000-000100080000",
+      "group": "Data & Analytics",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100020005",
+      "name": "Android Developer",
+      "groupId": "00000000-0000-4000-8000-000100020000",
+      "group": "Frontend/Mobile/Game",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100020009",
+      "name": "AR/VR Developer",
+      "groupId": "00000000-0000-4000-8000-000100020000",
+      "group": "Frontend/Mobile/Game",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100020006",
+      "name": "Flutter Developer",
+      "groupId": "00000000-0000-4000-8000-000100020000",
+      "group": "Frontend/Mobile/Game",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100020001",
+      "name": "Frontend Software Engineer",
+      "groupId": "00000000-0000-4000-8000-000100020000",
+      "group": "Frontend/Mobile/Game",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-00010002000a",
+      "name": "Game Developer",
+      "groupId": "00000000-0000-4000-8000-000100020000",
+      "group": "Frontend/Mobile/Game",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100020004",
+      "name": "iOS/Swift Developer",
+      "groupId": "00000000-0000-4000-8000-000100020000",
+      "group": "Frontend/Mobile/Game",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100020002",
+      "name": "React Developer",
+      "groupId": "00000000-0000-4000-8000-000100020000",
+      "group": "Frontend/Mobile/Game",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100020003",
+      "name": "UI/UX Developer",
+      "groupId": "00000000-0000-4000-8000-000100020000",
+      "group": "Frontend/Mobile/Game",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100020007",
+      "name": "Unity Developer",
+      "groupId": "00000000-0000-4000-8000-000100020000",
+      "group": "Frontend/Mobile/Game",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100020008",
+      "name": "Unreal Engine Developer",
+      "groupId": "00000000-0000-4000-8000-000100020000",
+      "group": "Frontend/Mobile/Game",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100060002",
+      "name": "AI Engineer",
+      "groupId": "00000000-0000-4000-8000-000100060000",
+      "group": "Machine Learning & AI",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-00010006000c",
+      "name": "Data Annotation/AI Tutor",
+      "groupId": "00000000-0000-4000-8000-000100060000",
+      "group": "Machine Learning & AI",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100060003",
+      "name": "LLM Engineer",
+      "groupId": "00000000-0000-4000-8000-000100060000",
+      "group": "Machine Learning & AI",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100060001",
+      "name": "Machine Learning Engineer",
+      "groupId": "00000000-0000-4000-8000-000100060000",
+      "group": "Machine Learning & AI",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100060008",
+      "name": "Machine Learning, Ads",
+      "groupId": "00000000-0000-4000-8000-000100060000",
+      "group": "Machine Learning & AI",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-00010006000b",
+      "name": "Machine Learning, Computer Vision",
+      "groupId": "00000000-0000-4000-8000-000100060000",
+      "group": "Machine Learning & AI",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100060005",
+      "name": "Machine Learning, Deep Learning",
+      "groupId": "00000000-0000-4000-8000-000100060000",
+      "group": "Machine Learning & AI",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-00010006000a",
+      "name": "Machine Learning, Infrastructure",
+      "groupId": "00000000-0000-4000-8000-000100060000",
+      "group": "Machine Learning & AI",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100060006",
+      "name": "Machine Learning, Model Training and Inference",
+      "groupId": "00000000-0000-4000-8000-000100060000",
+      "group": "Machine Learning & AI",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100060009",
+      "name": "Machine Learning, Operations (ML Ops)",
+      "groupId": "00000000-0000-4000-8000-000100060000",
+      "group": "Machine Learning & AI",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100060007",
+      "name": "Machine Learning, Search System",
+      "groupId": "00000000-0000-4000-8000-000100060000",
+      "group": "Machine Learning & AI",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100060004",
+      "name": "Machine Learning/AI Researcher",
+      "groupId": "00000000-0000-4000-8000-000100060000",
+      "group": "Machine Learning & AI",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-0001000a0001",
+      "name": "Project/Program Manager (Project Management)",
+      "groupId": "00000000-0000-4000-8000-0001000a0000",
+      "group": "Project Management",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-0001000a0003",
+      "name": "Scrum Master",
+      "groupId": "00000000-0000-4000-8000-0001000a0000",
+      "group": "Project Management",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-0001000a0002",
+      "name": "Technical Project Manager",
+      "groupId": "00000000-0000-4000-8000-0001000a0000",
+      "group": "Project Management",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100040002",
+      "name": "Cloud Security Engineer",
+      "groupId": "00000000-0000-4000-8000-000100040000",
+      "group": "System Reliability & Security",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100040003",
+      "name": "Cyber Security Analyst",
+      "groupId": "00000000-0000-4000-8000-000100040000",
+      "group": "System Reliability & Security",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100040004",
+      "name": "Cyber Security Engineer",
+      "groupId": "00000000-0000-4000-8000-000100040000",
+      "group": "System Reliability & Security",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100040008",
+      "name": "DevOps",
+      "groupId": "00000000-0000-4000-8000-000100040000",
+      "group": "System Reliability & Security",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100040005",
+      "name": "Network Engineer (System Reliability & Security)",
+      "groupId": "00000000-0000-4000-8000-000100040000",
+      "group": "System Reliability & Security",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100040001",
+      "name": "Network Security Engineer",
+      "groupId": "00000000-0000-4000-8000-000100040000",
+      "group": "System Reliability & Security",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100040007",
+      "name": "Site Reliability Engineer (SRE)",
+      "groupId": "00000000-0000-4000-8000-000100040000",
+      "group": "System Reliability & Security",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100040009",
+      "name": "SoC Analyst",
+      "groupId": "00000000-0000-4000-8000-000100040000",
+      "group": "System Reliability & Security",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100040006",
+      "name": "Systems Engineer",
+      "groupId": "00000000-0000-4000-8000-000100040000",
+      "group": "System Reliability & Security",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100090004",
+      "name": "CTO",
+      "groupId": "00000000-0000-4000-8000-000100090000",
+      "group": "Technical Leadership",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100090003",
+      "name": "Engineering Director/VP",
+      "groupId": "00000000-0000-4000-8000-000100090000",
+      "group": "Technical Leadership",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100090001",
+      "name": "Engineering Manager",
+      "groupId": "00000000-0000-4000-8000-000100090000",
+      "group": "Technical Leadership",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100090002",
+      "name": "Software Architect",
+      "groupId": "00000000-0000-4000-8000-000100090000",
+      "group": "Technical Leadership",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100070002",
+      "name": "Developer Relations",
+      "groupId": "00000000-0000-4000-8000-000100070000",
+      "group": "Technical Sales",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100070001",
+      "name": "Sales Engineer (Technical Sales)",
+      "groupId": "00000000-0000-4000-8000-000100070000",
+      "group": "Technical Sales",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100070003",
+      "name": "Solutions Architect/Forward Deployed Engineer",
+      "groupId": "00000000-0000-4000-8000-000100070000",
+      "group": "Technical Sales",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100070005",
+      "name": "Technical Account Manager",
+      "groupId": "00000000-0000-4000-8000-000100070000",
+      "group": "Technical Sales",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100070004",
+      "name": "Technical Writing",
+      "groupId": "00000000-0000-4000-8000-000100070000",
+      "group": "Technical Sales",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100050006",
+      "name": "Database Administrator",
+      "groupId": "00000000-0000-4000-8000-000100050000",
+      "group": "Technical Support",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100050002",
+      "name": "Help Desk Technician/Desktop Support Technician",
+      "groupId": "00000000-0000-4000-8000-000100050000",
+      "group": "Technical Support",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100050001",
+      "name": "IT Support Specialist",
+      "groupId": "00000000-0000-4000-8000-000100050000",
+      "group": "Technical Support",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100050004",
+      "name": "Network Support Specialist",
+      "groupId": "00000000-0000-4000-8000-000100050000",
+      "group": "Technical Support",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100050005",
+      "name": "Salesforce Administrator",
+      "groupId": "00000000-0000-4000-8000-000100050000",
+      "group": "Technical Support",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100050003",
+      "name": "System Administrator",
+      "groupId": "00000000-0000-4000-8000-000100050000",
+      "group": "Technical Support",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100030002",
+      "name": "Automation Test Engineer",
+      "groupId": "00000000-0000-4000-8000-000100030000",
+      "group": "Testing (Software/Internet/AI)",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100030003",
+      "name": "QA Manager",
+      "groupId": "00000000-0000-4000-8000-000100030000",
+      "group": "Testing (Software/Internet/AI)",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    },
+    {
+      "id": "00000000-0000-4000-8000-000100030001",
+      "name": "Software Testing/Quality Assurance Engineer",
+      "groupId": "00000000-0000-4000-8000-000100030000",
+      "group": "Testing (Software/Internet/AI)",
+      "rootId": "00000000-0000-4000-8000-000100000000",
+      "root": "Software/Internet/AI",
+      "depth": 3
+    }
+  ]
+}

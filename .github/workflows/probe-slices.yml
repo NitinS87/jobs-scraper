@@ -1,0 +1,60 @@
+name: Probe Slices
+
+# Verifies a board's candidate slice list from GitHub's network.
+#
+# Two boards cannot be checked from a developer machine: NaukriGulf returns
+# ERR_HTTP2_PROTOCOL_ERROR on every path (including the one the scheduled run
+# scrapes successfully) and JobsInJapan 403s after the first request. The runner
+# egresses from the same network the production scraper uses, so a green result
+# here is the only evidence worth acting on.
+#
+# Read-only: no Supabase credentials, no writes, always exits 0.
+
+on:
+  workflow_dispatch:
+    inputs:
+      board:
+        description: Board to probe
+        required: true
+        type: choice
+        options:
+          - naukrigulf
+          - jobsinjapan
+          - avjobs
+
+# Shares the scrape group so a probe can never run against a board while the
+# scheduled scrape is hitting the same site.
+concurrency:
+  group: scrape-jobs
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Probe ${{ inputs.board }}
+        # Passed via env rather than interpolated into the command. `board` is a
+        # choice input so GitHub already constrains it to the listed options,
+        # but keeping untrusted-looking values out of `run:` is the house rule.
+        env:
+          BOARD: ${{ inputs.board }}
+        run: node scripts/probe-slices.js "$BOARD"

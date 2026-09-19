@@ -62,4 +62,29 @@ jobs:
           ENGLISHJOBS_MAX_JOBS: ${{ vars.ENGLISHJOBS_MAX_JOBS || '400' }}
           FINN_MAX_JOBS: ${{ vars.FINN_MAX_JOBS || '400' }}
           JOBBSAFARI_MAX_JOBS: ${{ vars.JOBBSAFARI_MAX_JOBS || '400' }}
+          # Vertical rotation (lib/verticals.js). Software/Internet/AI is pinned
+          # to every run; 6 of the other 18 roots rotate, so a full cycle is
+          # 3 runs = 18h. VERTICALS_ALL is deliberately absent — an unbounded
+          # sweep belongs only to the manual backfill workflow.
+          VERTICALS_PER_RUN: ${{ vars.VERTICALS_PER_RUN || '6' }}
+          VERTICALS_PINNED: ${{ vars.VERTICALS_PINNED || 'software-internet-ai' }}
+          VERTICALS_ONLY: ${{ vars.VERTICALS_ONLY || '' }}
+          VERTICALS_SKIP: ${{ vars.VERTICALS_SKIP || '' }}
+          MAX_JOBS_PER_VERTICAL: ${{ vars.MAX_JOBS_PER_VERTICAL || '' }}
+          # Boards that previously had no cap at all. WeWorkRemotely drives
+          # Playwright per detail page and its feed count went 4 -> 9; CutShort
+          # was paths x 10 pages with no ceiling and its path count went 6 -> 14.
+          WEWORKREMOTELY_MAX_JOBS: ${{ vars.WEWORKREMOTELY_MAX_JOBS || '250' }}
+          CUTSHORT_MAX_JOBS: ${{ vars.CUTSHORT_MAX_JOBS || '300' }}
+          TEAL_MAX_QUERIES: ${{ vars.TEAL_MAX_QUERIES || '14' }}
+          # Keep mappings additive for the first week after the matcher change:
+          # the uploader reconciles categories for unchanged jobs, so the first
+          # run would otherwise delete mappings the old keyword map produced
+          # across 15,027 already-categorised jobs.
+          CATEGORY_ADDITIVE_ONLY: ${{ vars.CATEGORY_ADDITIVE_ONLY || 'true' }}
+          # Off until the "Probe Slices" workflow confirms these boards accept
+          # non-software search terms from GitHub's network. Neither can be
+          # verified from a developer machine.
+          NAUKRIGULF_VERTICALS_ENABLED: ${{ vars.NAUKRIGULF_VERTICALS_ENABLED || 'false' }}
+          JOBSINJAPAN_VERTICALS_ENABLED: ${{ vars.JOBSINJAPAN_VERTICALS_ENABLED || 'false' }}
         run: node runScrapers.js

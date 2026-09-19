@@ -21,7 +21,24 @@ function isValidUrl(str) {
     return false;
   }
 }
-const START_URL = `${BASE_URL}/software-engineer-jobs?easyApply=false`;
+// Vertical slices are UNVERIFIED: this host returns ERR_HTTP2_PROTOCOL_ERROR
+// from a developer network on every path, including this one, which the
+// scheduled run scrapes successfully. Run the "Probe Slices" workflow
+// (.github/workflows/probe-slices.yml) from GitHub's network first, then set
+// NAUKRIGULF_VERTICALS_ENABLED=true. Until then behaviour is unchanged.
+const VERTICAL_KEYWORDS = [
+  'software-engineer', 'accountant', 'sales', 'hr', 'marketing',
+  'finance', 'civil-engineer', 'mechanical-engineer',
+];
+
+const VERTICALS_ENABLED = /^(1|true|yes|on)$/i.test(
+  process.env.NAUKRIGULF_VERTICALS_ENABLED || '',
+);
+
+const START_URLS = (VERTICALS_ENABLED ? VERTICAL_KEYWORDS : ['software-engineer'])
+  .map((kw) => `${BASE_URL}/${kw}-jobs?easyApply=false`);
+
+const START_URL = START_URLS[0];
 const MAX_JOBS = 100;
 const BATCH_SIZE = 5;
 const BATCH_DELAY_MS = 2000;
