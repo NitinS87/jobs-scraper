@@ -10,15 +10,34 @@ const {
   parseCountryCode,
   parseSalaryText,
 } = require("../lib/descriptionParser");
+const { reportSliceHealth } = require("../lib/scraperUtils");
 
 playwright.chromium.use(StealthPlugin());
 
-const FEED_URLS = [
-  "https://weworkremotely.com/categories/remote-full-stack-programming-jobs.rss",
-  "https://weworkremotely.com/categories/remote-back-end-programming-jobs.rss",
-  "https://weworkremotely.com/categories/remote-front-end-programming-jobs.rss",
-  "https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss",
+// Programming feeds first: the run budget truncates the tail, and this board
+// must not regress on Software/Internet/AI volume. The five non-tech feeds were
+// verified live 2026-09-18 (+141 items against the 102 the tech feeds carried).
+const FEED_SLUGS = [
+  "remote-full-stack-programming-jobs",
+  "remote-back-end-programming-jobs",
+  "remote-front-end-programming-jobs",
+  "remote-devops-sysadmin-jobs",
+  "remote-product-jobs",
+  "remote-design-jobs",
+  "remote-customer-support-jobs",
+  "remote-sales-and-marketing-jobs",
+  "remote-management-and-finance-jobs",
 ];
+
+const FEED_URLS = FEED_SLUGS.map(
+  (slug) => `https://weworkremotely.com/categories/${slug}.rss`,
+);
+
+// This board drives Playwright per detail page and previously had neither a cap
+// nor a deadline; more than doubling its item count without both is the easiest
+// way to blow the 50-minute whole-run budget.
+const MAX_JOBS = Number(process.env.WEWORKREMOTELY_MAX_JOBS) || 250;
+const SOFT_DEADLINE_MS = Number(process.env.WEWORKREMOTELY_DEADLINE_MS) || 3 * 60 * 1000;
 
 const DETAIL_BATCH_SIZE = 5;
 const DETAIL_PAGE_TIMEOUT = 15000;
@@ -233,7 +252,10 @@ async function scrapeWeWorkRemotely() {
   const seenLinks = new Set();
   const allRssItems = [];
 
+  const sliceHealth = [];
+
   for (const feedUrl of FEED_URLS) {
+    const slug = feedUrl.split("/").pop().replace(".rss", "");
     try {
       const response = await axios.get(feedUrl, {
         timeout: 15000,
@@ -255,17 +277,24 @@ async function scrapeWeWorkRemotely() {
           added++;
         }
       }
+      sliceHealth.push({ slice: slug, items: feedItems.length });
       console.log(
-        `  Feed ${feedUrl.split("/").pop()}: ${feedItems.length} items (${added} new, ${feedItems.length - added} duplicates)`
+        `  Feed ${slug}: ${feedItems.length} items (${added} new, ${feedItems.length - added} duplicates)`
       );
     } catch (err) {
+      sliceHealth.push({ slice: slug, items: 0 });
       console.warn(`  Failed to fetch feed ${feedUrl}: ${err.message}`);
     }
   }
 
-  const rssItems = allRssItems;
+  reportSliceHealth("WeWorkRemotely", sliceHealth);
+
+  const rssItems = allRssItems.slice(0, MAX_JOBS);
+  const capped = allRssItems.length - rssItems.length;
   console.log(
-    `Fetched ${rssItems.length} unique RSS items from WeWorkRemotely, fetching detail pages...`
+    `Fetched ${allRssItems.length} unique RSS items from WeWorkRemotely`
+    + `${capped > 0 ? ` (capped to ${MAX_JOBS}, dropped ${capped})` : ""}`
+    + `, fetching detail pages...`
   );
 
   // Step 2: Launch Playwright for detail pages
@@ -278,8 +307,19 @@ async function scrapeWeWorkRemotely() {
 
   try {
     // Fetch detail pages in batches
+    const deadline = Date.now() + SOFT_DEADLINE_MS;
     const detailResults = [];
     for (let i = 0; i < rssItems.length; i += DETAIL_BATCH_SIZE) {
+      // Yield what we have rather than being SIGKILLed by the whole-run budget:
+      // this board is one Playwright navigation per job, so a slow site can eat
+      // the tail of the run on its own.
+      if (Date.now() > deadline) {
+        console.warn(
+          `  WWR: soft deadline reached after ${detailResults.length}/${rssItems.length} detail pages`
+        );
+        break;
+      }
+
       const batch = rssItems.slice(i, i + DETAIL_BATCH_SIZE);
       const batchResults = await Promise.all(
         batch.map((item) => fetchDetailPage(context, item.link))
@@ -294,7 +334,10 @@ async function scrapeWeWorkRemotely() {
       );
     }
 
-    const jobs = rssItems.map((item, idx) => {
+    // Only emit items whose detail page we actually fetched. If the soft
+    // deadline cut the loop short, the remainder would otherwise be written as
+    // RSS-only records and overwrite richer rows already in the database.
+    const jobs = rssItems.slice(0, detailResults.length).map((item, idx) => {
       const rawTitle = item.title || "";
       const companyFromCreator = item["dc:creator"] || null;
       const detail = detailResults[idx];

@@ -1,5 +1,6 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const { reportSliceHealth } = require('../lib/scraperUtils');
 const {
   parseDescription,
   parseExperienceLevelFromTitle,
@@ -9,14 +10,30 @@ const {
 const { delay } = require('../lib/scraperUtils');
 
 const BASE = 'https://cutshort.io';
+// Verified live 2026-09-18: /jobs/product-jobs and /jobs/design-jobs return
+// 55 KB empty shells with zero jobs, against ~1.2 MB for every working path.
+// They had been configured here and silently contributing nothing.
 const LISTING_PATHS = [
   '/jobs/startup-jobs',
+  '/jobs/backend-developer-jobs',
+  '/jobs/frontend-developer-jobs',
+  '/jobs/fullstack-developer-jobs',
+  '/jobs/datascience-jobs',
+  '/jobs/devops-jobs',
+  '/jobs/cyber-security-jobs',
   '/jobs/sales-jobs',
   '/jobs/marketing-jobs',
-  '/jobs/product-jobs',
-  '/jobs/design-jobs',
+  '/jobs/digital-marketing-jobs',
+  '/jobs/content-marketing-jobs',
+  '/jobs/business-development-jobs',
+  '/jobs/graphic-designer-jobs',
   '/jobs/finance-jobs',
 ];
+
+// This loop is paths x MAX_PAGES with no ceiling; it had none before, and
+// more than doubling the path count without one is a budget hazard.
+const MAX_JOBS = Number(process.env.CUTSHORT_MAX_JOBS) || 300;
+const SOFT_DEADLINE_MS = Number(process.env.CUTSHORT_DEADLINE_MS) || 2 * 60 * 1000;
 const MAX_PAGES = 10;
 const PAGE_DELAY_MS = 500;
 const REQUEST_TIMEOUT = 30000;
@@ -162,9 +179,17 @@ async function scrapeCutShort() {
   const seenIds = new Set();
   const allJobs = [];
 
+  const deadline = Date.now() + SOFT_DEADLINE_MS;
+  const sliceHealth = [];
+
   for (const path of LISTING_PATHS) {
+    if (allJobs.length >= MAX_JOBS || Date.now() > deadline) {
+      console.warn(`CutShort: stopping early at ${allJobs.length} jobs (cap ${MAX_JOBS})`);
+      break;
+    }
     let pageJobsCount = 0;
     for (let page = 1; page <= MAX_PAGES; page++) {
+      if (allJobs.length >= MAX_JOBS || Date.now() > deadline) break;
       const rawJobs = await fetchPage(path, page);
       if (rawJobs.length === 0) break;
 
@@ -182,11 +207,19 @@ async function scrapeCutShort() {
       if (newOnPage === 0) break;
       if (page < MAX_PAGES) await delay(PAGE_DELAY_MS);
     }
+    sliceHealth.push({ slice: path, items: pageJobsCount });
     console.log(`CutShort: ${path} → ${pageJobsCount} new jobs`);
   }
 
-  console.log(`CutShort: extracted ${allJobs.length} unique jobs`);
-  return allJobs;
+  reportSliceHealth('CutShort', sliceHealth);
+
+  // The loop checks the cap per page, so the last page can overshoot it.
+  const jobs = allJobs.slice(0, MAX_JOBS);
+  console.log(
+    `CutShort: extracted ${jobs.length} unique jobs`
+    + (allJobs.length > jobs.length ? ` (trimmed from ${allJobs.length})` : ''),
+  );
+  return jobs;
 }
 
 module.exports = scrapeCutShort;

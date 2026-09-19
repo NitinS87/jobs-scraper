@@ -24,7 +24,10 @@ const ALGOLIA_ITEM = (id) => `https://hn.algolia.com/api/v1/items/${id}`;
 const HN_ITEM_URL = (id) => `https://news.ycombinator.com/item?id=${id}`;
 const RECENT_THREADS = 3;
 
-const TITLE_KEYWORDS = /\b(Engineer|Developer|Designer|Manager|Scientist|Lead|PM|Architect|Founder|Researcher|SRE|DevOps|Analyst|Director|Programmer|Consultant|Specialist|Administrator|QA|Tester|Architect|CTO|CEO|VP|Head|Principal|Staff|Senior|Junior)\b/i;
+// Widened beyond tech 2026-09-18: the taxonomy covers 19 roots and this gate
+// admitted only engineering-shaped titles, so marketing, finance, legal and
+// HR postings in the same threads were dropped before classification.
+const TITLE_KEYWORDS = /\b(Engineer|Developer|Designer|Manager|Scientist|Lead|PM|Architect|Founder|Researcher|SRE|DevOps|Analyst|Director|Programmer|Consultant|Specialist|Administrator|QA|Tester|CTO|CEO|VP|Head|Principal|Staff|Senior|Junior|Marketer|Marketing|Accountant|Controller|Counsel|Attorney|Paralegal|Recruiter|Talent|Copywriter|Writer|Editor|Support|Success|Operations|Ops|Strategist|Coordinator|Buyer|Planner|Technician|Advisor|Auditor|Bookkeeper)\b/i;
 const REMOTE_KEYWORDS = /\b(REMOTE|Remote|Onsite|On-site|Hybrid|WFH)\b/;
 const REMOTE_DETECT = /\bremote\b/i;
 const ONSITE_DETECT = /\bon[- ]?site\b/i;

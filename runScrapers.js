@@ -2,6 +2,7 @@ require('dotenv').config();
 const { processScraperResults } = require('./lib/uploader');
 const { withTimeout } = require('./lib/scraperUtils');
 const { getRecencyConfig } = require('./lib/recency');
+const { getActiveVerticals } = require('./lib/verticals');
 
 // Node 22 treats an unhandled rejection as fatal, which took down the whole
 // 22-scraper pipeline mid-run: playwright-extra's stealth plugin emits
@@ -78,6 +79,9 @@ const mins = (ms) => (ms / 60000).toFixed(1);
 
 async function run() {
   console.log(`Recency window: ${recency.label}`);
+  // Verticals rotate per run so the whole-run budget is not blown fetching all
+  // 19 taxonomy roots from every board; the corpus accumulates across runs.
+  console.log(`Verticals: ${getActiveVerticals().label}`);
   console.log(`Run budget: ${RUN_BUDGET_MS === Infinity ? 'unlimited' : `${mins(RUN_BUDGET_MS)} min`}`);
   if (only.length) console.log(`SCRAPER_ONLY: ${only.join(', ')}`);
   if (skip.length) console.log(`SCRAPER_SKIP: ${skip.join(', ')}`);

@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert');
+
+const taxonomy = require('../lib/taxonomy.generated.json');
+const { matchCategoryIds } = require('../lib/categoryScorer');
 const path = require('node:path');
 
 const { contentHash } = require('../lib/uploadPlanner');
@@ -78,20 +81,42 @@ function makeJob(n, overrides = {}) {
   };
 }
 
+// Rebuild a real job_categories table from the committed taxonomy snapshot, so
+// the matcher exercises its live path instead of silently falling back. Before
+// the taxonomy rewrite this mock returned [], which meant no title ever matched
+// and the "zero churn" assertions below passed vacuously.
+const CATEGORY_ROWS = (() => {
+  const rows = taxonomy.roots.map((r) => ({ id: r.id, name: r.name, parent_id: null }));
+  const seenGroups = new Set();
+  for (const leaf of taxonomy.leaves) {
+    if (leaf.groupId !== leaf.rootId && !seenGroups.has(leaf.groupId)) {
+      seenGroups.add(leaf.groupId);
+      rows.push({ id: leaf.groupId, name: leaf.group, parent_id: leaf.rootId });
+    }
+  }
+  for (const leaf of taxonomy.leaves) {
+    rows.push({ id: leaf.id, name: leaf.name, parent_id: leaf.groupId });
+  }
+  return rows;
+})();
+
+/** The categories the scorer resolves for a given job title. */
+const categoriesFor = (title) => matchCategoryIds(taxonomy, title);
+
 /** Handler factory: `existing` maps external_job_id -> {id, content_hash}. */
-function handlersFor(existing, companies) {
+function handlersFor(existing, companies, priorMappings = []) {
   return (s) => {
     if (s.table === 'job_sources') {
       return s.op === 'select' ? { data: { id: 'src-1' }, error: null } : { data: null, error: null };
     }
-    if (s.table === 'job_categories') return { data: [], error: null };
+    if (s.table === 'job_categories') return { data: CATEGORY_ROWS, error: null };
     if (s.table === 'companies') {
       if (s.op === 'select' && s.range) return { data: companies, error: null };
       if (s.op === 'select') return { data: companies, error: null };
       if (s.op === 'insert') return { data: { id: 'new-co' }, error: null };
       return { data: null, error: null };
     }
-    if (s.table === 'job_category_mappings') return { data: [], error: null };
+    if (s.table === 'job_category_mappings') return { data: priorMappings, error: null };
     if (s.table === 'jobs') {
       if (s.op === 'select' && s.limit === 1) return { data: [], error: null }; // schema probe: content_hash exists
       if (s.op === 'select') {
@@ -123,7 +148,14 @@ test('unchanged jobs produce zero writes to the jobs table', async () => {
   const existing = {};
   for (const rec of upserted) existing[rec.external_job_id] = { id: `j-${rec.external_job_id}`, content_hash: rec.content_hash };
 
-  const { uploader, calls } = installMock(handlersFor(existing, COMPANIES));
+  // Seed the mappings the scorer resolves for these titles. Without this the
+  // job looks unchanged but its categories look brand new, and the run writes
+  // mappings every time — which is exactly the churn this test exists to catch.
+  const priorMappings = jobs.flatMap((job) => categoriesFor(job.title)
+    .map((categoryId) => ({ job_id: `j-${job.external_job_id}`, category_id: categoryId })));
+  assert.ok(priorMappings.length > 0, 'precondition: the scorer must classify these titles');
+
+  const { uploader, calls } = installMock(handlersFor(existing, COMPANIES, priorMappings));
   const stats = await uploader.processScraperResults(jobs);
 
   assert.equal(stats.unchanged, 3);

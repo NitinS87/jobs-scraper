@@ -18,7 +18,16 @@ node runScrapers.js      # Run all scrapers + upload to Supabase
   - `supabaseClient.js` — Supabase client init (service role key)
   - `uploader.js` — Core DB integration (source, company, job upsert, category mapping). Batched — see below
   - `uploadPlanner.js` — Pure planning helpers for the uploader (content hashing, insert/update/skip classification, category diffing, key-signature grouping). No Supabase calls, so it is unit-testable
-  - `categoryMatcher.js` — Maps job titles to 392 existing DB categories via keyword matching
+  - `taxonomy.generated.json` — Committed snapshot of the 392-node `job_categories` tree
+    (19 roots / 85 groups / 288 leaves). Regenerate with `node scripts/syncTaxonomy.js`
+  - `categoryScorer.js` — Pure title→category scoring against the taxonomy. No Supabase, so it
+    is unit-testable (same rationale as `uploadPlanner.js`)
+  - `categoryRules.js` — Pure data for the scorer: normalisation, curated rules, reject list
+  - `categoryMatcher.js` — Thin async shim over the scorer; loads the live taxonomy, falls back
+    to the committed snapshot
+  - `categoryMappingWriter.js` — The single `job_category_mappings` write path, shared by the
+    uploader and `scripts/recategorise.js`
+  - `verticals.js` — Which taxonomy roots this run collects (rotation)
   - `logoUploader.js` — Logo download + Supabase storage upload + favicon fallback
   - `descriptionParser.js` — Shared HTML parser for requirements/skills/salary/benefits extraction + `parseCountryCode()` + `parseSalaryText()`
   - `recency.js` — Recency-window policy for the high-volume boards (see below)
@@ -88,6 +97,52 @@ These two are planned but not implemented; both need free registration:
   blocked. The legacy `public.api.careerjet.net` endpoint is retired (401, "use v4 instead"). The
   only route is the Careerjet **v4 API** (`search.api.careerjet.net/v4/query`), which needs a free
   publisher key from careerjet.com/partners/api and caps at 1,000 results per query.
+
+## Categorisation
+
+Scope and classification are both defined by the Supabase taxonomy, not by hand-written lists.
+
+- **`lib/jobFilter.js`'s `isProfessionalRole` is taxonomy membership**: a title is in scope iff
+  `categoryScorer` can place it in the 392-node tree. The old EXCLUDE/INCLUDE keyword lists are
+  gone — they contradicted the taxonomy and are why Education and Training held **0** jobs and
+  Healthcare **3** as of 2026-09-18. A small residual deny-list survives for roles with no home
+  anywhere in the tree (nurse, driver, cleaner, retail) because FINN and Cimix genuinely serve
+  those categories.
+- **Mappings are leaves-only.** 0 of 18,318 existing rows point at an interior node; roots
+  populate by rollup through `parent_id`. Writing ancestor rows would break that invariant.
+- **Scoring**: exact leaf name +10, curated rule 3–8, idf-weighted token overlap 0–4 (gated on
+  the leaf's own rarest token being present), bigram +2, group/root +1.5/+1.0 as a
+  *disambiguator* only — it applies once a leaf already scores ≥3, never as a detector.
+  `THRESHOLD = 4`, at most 3 categories per job, **no fallback category ever**.
+- ⚠️ **Tie-breaks must stay deterministic.** Five leaf names collide once the parenthetical
+  disambiguator is stripped (`Project/Program Manager` ×3, `Network Engineer`, `Paralegal`,
+  `Risk Analyst`, `Sales Engineer`). Without the ascending-id sort these flip run-to-run and
+  `planCategorySync` emits an insert+delete pair per job forever.
+- ⚠️ **`CATEGORY_ADDITIVE_ONLY=true` for the first week after any matcher change.** The uploader
+  reconciles categories for *unchanged* jobs, so the first run emits deletes for every mapping
+  the old rules produced and the new ones do not — across 15,027 already-categorised jobs.
+  `sql/002_category_mappings_backup.sql` is the accompanying snapshot.
+- Backfill: `node scripts/recategorise.js` (dry run by default, `--execute` to write).
+  Measured 2026-09-18: 17,228 of 32,255 jobs had zero mappings and 251 of 392 categories were
+  unused; the rewrite classifies 65.7% of that backlog and populates all 19 roots.
+
+## Vertical rotation
+
+`lib/verticals.js` picks which taxonomy roots each run collects, because all 19 roots from every
+board does not fit the budget.
+
+- `Software/Internet/AI` is **pinned to every run** (it is 10,090 of the mapped corpus); 6 of the
+  other 18 rotate per run. `18 % 6 === 0`, so the windows partition cleanly and a full cycle is
+  exactly 3 runs = **18h**. K=4 or 5 is coprime with 18 and stretches the cycle to 54h/108h.
+- The slot is `floor(now / 6h)`, derived from the clock rather than a counter, so it aligns to
+  the cron and a retry inside the same window picks the **identical** set.
+- Scrapers keep the zero-argument convention: they `require('../lib/verticals')` and call
+  `activeSlices()` inside the entry function. ⚠️ Passing the set via `process.env` from
+  `runScrapers.js` does **not** work — the runner requires all 22 scraper modules while building
+  its registry array, before `run()` executes, so module-level env reads see `undefined`.
+- Per-vertical caps **subdivide** `<SOURCE>_MAX_JOBS`; they never raise a board's total.
+- Wired into Teal, Cimix and FINN, where each slice is a full paging/detail pass. The remaining
+  broadened boards are bounded by their caps instead.
 
 ## Supabase Integration
 
@@ -159,6 +214,12 @@ run reports `headBranch: feature/job-scraper`). Do not reason about this from th
 check it. Merging to `main` deploys nothing.
 
 ## Gotchas
+
+- **Configured slices rot silently.** Found 2026-09-18: 4 of RealWorkFromAnywhere's 5 RSS feeds
+  returned HTTP 404 (it had been contributing design jobs only) and CutShort's `/jobs/product-jobs`
+  and `/jobs/design-jobs` returned 55 KB empty shells. Both hid behind a per-slice try/catch whose
+  warning scrolled past. `reportSliceHealth()` in `lib/scraperUtils.js` now logs at **error** level
+  when half a board's slices come back empty — check that line before trusting a board's volume.
 
 - `pnpm test` runs `node:test` (no framework dep). `lib/uploadPlanner.js` is unit-tested;
   `test/uploader.integration.test.js` drives `processScraperResults` against a mock Supabase

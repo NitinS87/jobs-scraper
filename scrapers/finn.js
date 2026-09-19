@@ -8,6 +8,7 @@ const {
 const { fetchInBatches, delay } = require('../lib/scraperUtils');
 const { isProfessionalRole, isLikelyEnglish } = require('../lib/jobFilter');
 const { isWithinWindow, getRecencyConfig } = require('../lib/recency');
+const { activeSlices } = require('../lib/verticals');
 
 // FINN.no is Norway's dominant classifieds site; /job/search is its job board.
 //
@@ -75,6 +76,12 @@ const OCCUPATIONS = [
   '0.2',  // Arkitekt og planlegging
   '0.51', // Rådgivning
   '0.50', // Revisjon og kontroll
+  // Enumerated from the live filter panel 2026-09-18. Note the facet list is
+  // context-dependent — the unfiltered search page exposes only 15 of them — so
+  // re-enumerate from a filtered page rather than trusting a single fetch.
+  '0.28', // Kundeservice        -> Customer Service
+  '0.26', // Kontor og administrasjon -> HR/Administrative
+  '0.64', // Undervisning og pedagogikk -> Education and Training
 ];
 
 const AD_URL_RE = /\/job\/ad\/(\d+)/;
@@ -125,11 +132,35 @@ function buildLocation(ld) {
   };
 }
 
+// Occupation facets grouped by taxonomy root. Pagination caps at page 50 per
+// facet, so each facet is a full paging pass — slice count is real cost.
+const SLICE_MAP = {
+  'software-internet-ai': ['0.23', '0.22', '0.1', '0.30', '0.5'],
+  'electrical-engineering': ['0.20'],
+  consulting: ['0.25', '0.51'],
+  'human-resource-administrative-legal': ['0.32', '0.41', '0.26'],
+  product: ['0.47'],
+  'creative-design': ['0.7'],
+  sales: ['0.53'],
+  marketing: ['0.34'],
+  finance: ['0.12'],
+  accounting: ['0.50'],
+  'legal-services': ['0.24'],
+  'education-and-training': ['0.13', '0.64'],
+  'real-estate-architecture': ['0.2'],
+  'customer-service': ['0.28'],
+  'production-manufacturing': ['0.48'],
+};
+
 async function collectCandidates(deadline) {
   const seen = new Map();
   let titleFiltered = 0;
 
-  for (const occupation of OCCUPATIONS) {
+  const { slices, roots } = activeSlices('FINN', SLICE_MAP);
+  const occupations = slices.length ? slices : OCCUPATIONS;
+  console.log(`FINN: ${occupations.length} occupation facets across roots [${roots.join(', ')}]`);
+
+  for (const occupation of occupations) {
     if (seen.size >= MAX_JOBS || Date.now() > deadline) break;
 
     for (let page = 1; page <= MAX_PAGES_PER_SLICE; page++) {
@@ -287,3 +318,4 @@ async function scrapeFinn() {
 }
 
 module.exports = scrapeFinn;
+module.exports.SLICE_MAP = SLICE_MAP;

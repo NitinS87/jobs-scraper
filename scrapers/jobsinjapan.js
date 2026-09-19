@@ -4,8 +4,23 @@ const UserAgent = require("user-agents");
 
 playwright.chromium.use(StealthPlugin());
 
-const START_URL =
-  "https://jobsinjapan.com/?s=software&location=&type=&_noo_job_field_english_level=&_noo_job_field_japanese_level=&_noo_job_field_employer_type=&post_type=noo_job";
+// Vertical slices are UNVERIFIED: this host 403s after the first request from a
+// developer network, so a multi-term loop is exactly the traffic pattern that
+// trips its rate limiter. Run the "Probe Slices" workflow first — the gate is
+// "N sequential searches all returned results", not "one URL returned 200" —
+// then set JOBSINJAPAN_VERTICALS_ENABLED=true. Until then behaviour is unchanged.
+const SEARCH_TERMS = ["software", "sales", "marketing", "finance", "designer", "engineer"];
+
+const VERTICALS_ENABLED = /^(1|true|yes|on)$/i.test(
+  process.env.JOBSINJAPAN_VERTICALS_ENABLED || ""
+);
+
+const buildSearchUrl = (term) =>
+  `https://jobsinjapan.com/?s=${encodeURIComponent(term)}&location=&type=&_noo_job_field_english_level=&_noo_job_field_japanese_level=&_noo_job_field_employer_type=&post_type=noo_job`;
+
+const START_URLS = (VERTICALS_ENABLED ? SEARCH_TERMS : ["software"]).map(buildSearchUrl);
+
+const START_URL = START_URLS[0];
 
 const randomDelay = (min = 1000, max = 2500) =>
   new Promise((res) =>
