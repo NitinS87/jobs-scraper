@@ -60,7 +60,12 @@ function installMock(handlers) {
   require.cache[clientPath] = { id: clientPath, filename: clientPath, loaded: true, exports: { from: builder } };
 
   // Force a fresh uploader bound to the mock, with clean module-level caches.
-  for (const p of ['../lib/uploader', '../lib/categoryMatcher']) delete require.cache[require.resolve(p)];
+  // categoryMappingWriter holds its own `supabase` reference, so it must be
+  // re-bound too — otherwise it stays wired to the REAL client and its writes
+  // never show up in `calls` (and would be aimed at production).
+  for (const p of ['../lib/uploader', '../lib/categoryMatcher', '../lib/categoryMappingWriter']) {
+    delete require.cache[require.resolve(p)];
+  }
   const uploader = require('../lib/uploader');
 
   return { uploader, calls };
@@ -320,4 +325,66 @@ test('no content_hash column means no content_hash in the payload', async () => 
   await uploader.processScraperResults([makeJob(1)]);
   const upsert = calls.find((c) => c.table === 'jobs' && c.op === 'upsert');
   assert.equal('content_hash' in upsert.payload[0], false, 'would 400 against the current schema');
+});
+
+test('newly inserted jobs get their category mappings in the same run', async () => {
+  // Regression: resolveInsertedIds built its lookup key with a literal NUL
+  // character where pendingCategories used a space, so the two maps never
+  // matched and EVERY freshly inserted job — on every scraper — was written
+  // with zero category mappings. Nothing errored; the rows simply landed
+  // uncategorised and only picked up categories if a later run re-scraped them
+  // and took the `existing` branch instead.
+  //
+  // Reproduced against Hyriko 2026-09-20: two consecutive inserts of 26 and 28
+  // jobs both produced 0 mappings, while a re-run of the same 26 produced 26.
+  const jobs = [1, 2, 3].map((n) => makeJob(n));
+
+  // No existing rows -> every job takes the insert path. The jobs select must
+  // return the inserted rows so resolveInsertedIds can find their ids.
+  const inserted = jobs.map((j, i) => ({
+    id: `new-${i + 1}`,
+    external_job_id: j.external_job_id,
+    external_source: j.external_source,
+    content_hash: null,
+  }));
+
+  let sawInsert = false;
+  const { uploader, calls } = installMock((s) => {
+    if (s.table === 'job_sources') {
+      return s.op === 'select' ? { data: { id: 'src-1' }, error: null } : { data: null, error: null };
+    }
+    if (s.table === 'job_categories') return { data: CATEGORY_ROWS, error: null };
+    if (s.table === 'companies') {
+      if (s.op === 'select') return { data: COMPANIES, error: null };
+      if (s.op === 'insert') return { data: { id: 'new-co' }, error: null };
+      return { data: null, error: null };
+    }
+    if (s.table === 'job_category_mappings') return { data: [], error: null };
+    if (s.table === 'jobs') {
+      if (s.op === 'select' && s.limit === 1) return { data: [], error: null };
+      // Before the write: nothing exists. After: the resolve lookup sees them.
+      if (s.op === 'select') return { data: sawInsert ? inserted : [], error: null };
+      if (s.op === 'upsert' || s.op === 'insert') { sawInsert = true; return { data: null, error: null }; }
+      return { data: null, error: null };
+    }
+    return { data: null, error: null };
+  });
+
+  const stats = await uploader.processScraperResults(jobs);
+  assert.equal(stats.inserted, 3, 'precondition: all three must take the insert path');
+
+  const mappingWrites = calls.filter(
+    (c) => c.table === 'job_category_mappings' && (c.op === 'upsert' || c.op === 'insert'),
+  );
+  const rows = mappingWrites.flatMap((c) => (Array.isArray(c.payload) ? c.payload : [c.payload]));
+
+  assert.ok(
+    rows.length > 0,
+    'inserted jobs must receive category mappings in the same run, not only on a later re-scrape',
+  );
+  assert.deepEqual(
+    [...new Set(rows.map((r) => r.job_id))].sort(),
+    ['new-1', 'new-2', 'new-3'],
+    'every inserted job id must appear in the mapping writes',
+  );
 });
