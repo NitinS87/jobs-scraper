@@ -39,7 +39,13 @@ const START_URLS = (VERTICALS_ENABLED ? VERTICAL_KEYWORDS : ['software-engineer'
   .map((kw) => `${BASE_URL}/${kw}-jobs?easyApply=false`);
 
 const START_URL = START_URLS[0];
-const MAX_JOBS = 100;
+const MAX_JOBS = Number(process.env.NAUKRIGULF_MAX_JOBS) || 100;
+
+// A hard timeout in runScrapers.js discards the whole run's work — this board
+// lost 100 already-collected URLs that way on 2026-09-20 (run 35518373605).
+// Yield what has been fetched instead, like the recency-windowed boards do.
+// Sized under the 8-minute per-scraper timeout below.
+const SOFT_DEADLINE_MS = Number(process.env.NAUKRIGULF_DEADLINE_MS) || 6.5 * 60 * 1000;
 const BATCH_SIZE = 5;
 const BATCH_DELAY_MS = 2000;
 
@@ -300,6 +306,8 @@ async function scrapeNaukriGulf() {
     ],
   });
 
+  const detailDeadline = Date.now() + SOFT_DEADLINE_MS;
+
   try {
     const context = await browser.newContext({
       userAgent: USER_AGENT,
@@ -395,6 +403,12 @@ async function scrapeNaukriGulf() {
     // Scrape detail pages sequentially (stealth plugin conflicts with parallel page opens)
     const results = [];
     for (let i = 0; i < allJobUrls.length; i++) {
+      if (Date.now() > detailDeadline) {
+        console.warn(
+          `NaukriGulf: soft deadline reached after ${results.length}/${allJobUrls.length} detail pages — returning partial results`
+        );
+        break;
+      }
       const url = allJobUrls[i];
       console.log(
         `NaukriGulf: Detail page ${i + 1}/${allJobUrls.length}`

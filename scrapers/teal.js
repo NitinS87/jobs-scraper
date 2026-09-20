@@ -175,7 +175,7 @@ function listingPath(query, pageNum, days) {
   return `/public/job_posts?${params.toString()}`;
 }
 
-async function collectCandidates(page, deadline) {
+async function collectCandidates(page, deadline, activeQueries) {
   const days = recencyApiDays('Teal');
   const seen = new Map();
   let titleFiltered = 0;
@@ -314,7 +314,7 @@ async function scrapeTeal() {
       return [];
     }
 
-    const { candidates, titleFiltered } = await collectCandidates(page, deadline);
+    const { candidates, titleFiltered } = await collectCandidates(page, deadline, activeQueries);
     console.log(`Teal: ${candidates.length} candidates passed the title filter (${titleFiltered} dropped)`);
     if (candidates.length === 0) return [];
 

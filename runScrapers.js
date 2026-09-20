@@ -51,7 +51,11 @@ const scrapers = [
   { name: 'RealWorkFromAnywhere', fn: require('./scrapers/realworkfromanywhere') },
   { name: 'TokyoDev', fn: require('./scrapers/tokyodev') },
   { name: 'JobsInJapan', fn: require('./scrapers/jobsinjapan') },
-  { name: 'NaukriGulf', fn: require('./scrapers/NaukriGulf-Scraper') },
+  // 8 verticals x pagination + up to 100 sequential detail pages does not fit
+  // the 5-minute default; a hard timeout here throws away the entire run
+  // (measured 2026-09-20, run 35518373605). The scraper also has its own
+  // shorter soft deadline so it yields partial results rather than nothing.
+  { name: 'NaukriGulf', fn: require('./scrapers/NaukriGulf-Scraper'), timeoutMs: 8 * 60 * 1000 },
   { name: 'HNHiring', fn: require('./scrapers/hnhiring') },
   { name: 'YCombinator', fn: require('./scrapers/ycombinator') },
   { name: 'CutShort', fn: require('./scrapers/cutshort') },
