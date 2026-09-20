@@ -76,6 +76,8 @@ jobs:
           # was paths x 10 pages with no ceiling and its path count went 6 -> 14.
           WEWORKREMOTELY_MAX_JOBS: ${{ vars.WEWORKREMOTELY_MAX_JOBS || '250' }}
           CUTSHORT_MAX_JOBS: ${{ vars.CUTSHORT_MAX_JOBS || '300' }}
+          HYRIKO_MAX_JOBS: ${{ vars.HYRIKO_MAX_JOBS || '300' }}
+          HYRIKO_MAX_PAGES: ${{ vars.HYRIKO_MAX_PAGES || '10' }}
           TEAL_MAX_QUERIES: ${{ vars.TEAL_MAX_QUERIES || '14' }}
           # Keep mappings additive for the first week after the matcher change:
           # the uploader reconciles categories for unchanged jobs, so the first

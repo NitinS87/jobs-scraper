@@ -64,6 +64,9 @@ const scrapers = [
   { name: 'SourcingXpress', fn: require('./scrapers/sourcingxpress') },
   { name: 'Cimix', fn: require('./scrapers/cimix') },
   { name: 'WorkInDenmark', fn: require('./scrapers/workindenmark') },
+  // Aggregates company career pages for IN/US/CA. Cheap (axios + cheerio, no
+  // browser) and carries full JSON-LD, so it sits ahead of the windowed boards.
+  { name: 'Hyriko', fn: require('./scrapers/hyriko'), timeoutMs: 4 * 60 * 1000 },
 
   // Recency-windowed high-volume sources (see lib/recency.js). Ordered
   // cheapest-first: Teal/JobStairs/EnglishJobs need no per-job detail page, so
