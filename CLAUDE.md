@@ -37,7 +37,9 @@ node runScrapers.js      # Run all scrapers + upload to Supabase
 Three approaches:
 1. **RSS/XML feeds** (axios + xml2js) — Jobicy, WeWorkRemotely, AVJobs, RealWorkFromAnywhere
 2. **Browser automation** (playwright) — TokyoDev, JobsInJapan, NaukriGulf, WorkInDenmark, Wellfound (Tier C), SimplyHired (Tier C)
-3. **JSON APIs / SSR scrape** (axios + cheerio) — HNHiring (HN Algolia API), YCombinator (JobPosting JSON-LD), CutShort (Next.js __NEXT_DATA__), NCS (POST `/api/v1/job-posts/search`), GulfTalent (mobile-site JSON-LD), SourcingXpress (SSR HTML), Cimix (JSON-LD per category), JobStairs (BeeSite API), JobbSafari (Next.js __NEXT_DATA__), FINN (SSR + JSON-LD), EnglishJobs (`?format=markdown`)
+3. **JSON APIs / SSR scrape** (axios + cheerio) — HNHiring (HN Algolia API), YCombinator (JobPosting JSON-LD), CutShort (Next.js __NEXT_DATA__), NCS (POST `/api/v1/job-posts/search`), GulfTalent (mobile-site JSON-LD), SourcingXpress (SSR HTML), Cimix (JSON-LD per category), JobStairs (BeeSite API), JobbSafari (Next.js __NEXT_DATA__), FINN (SSR + JSON-LD), EnglishJobs (`?format=markdown`), Hyriko (SSR + JSON-LD, IN/US/CA), GetSetHire (one open JSON call), HuntYourTribe (rendered DOM, no JSON-LD)
+
+EchoJobs is a second exception to "SSR means axios": it sits behind a Vercel Security Checkpoint, so it drives a stealth browser (see Gotchas).
 
 Teal is the exception to the "JSON API means axios" rule: its API is plain JSON but Cloudflare
 rejects Node's TLS fingerprint, so it drives Playwright (see Gotchas).
@@ -87,6 +89,20 @@ These two are planned but not implemented; both need free registration:
 - **Jooble** — `https://jooble.org/api/about`. Set `JOOBLE_API_KEY`. POST to `https://jooble.org/api/{key}` with `{ keywords, location, page }`.
 
 ### Evaluated and rejected — do not re-investigate
+
+- **factanker.com** — NOT a job board. Its `/llms.txt` documents a corporate-facts API (SEC
+  filings, LEI, IRS 990s, FFIEC call reports, USAspending awards) and the word "job" appears
+  **zero times** in it; `/jobs` is an undocumented side page with no job links in static HTML.
+  Terms are explicit: *"individual use free with attribution; bulk extraction needs an
+  agreement"*. `robots.txt` also disallows `/api/` and `/mcp` for named AI bots while `llms.txt`
+  invites them — contradictory, and the conservative reading governs. Its free per-entity API is
+  still interesting for **company enrichment** (company → SEC CIK / LEI / EIN), which is a
+  different feature.
+- **nirdisha.in** — DEFERRED, not dead. Its sitemap lists **1,840 `/job/*` URLs** (no pagination
+  needed), which would make it the easiest source here. But every detail page returns HTTP 500
+  with the site's own "This job did not load" error — verified 2026-09-20 and again 2026-09-22,
+  via curl and a real browser. Listing pages render behind a cookie-consent gate with no visible
+  data API. Re-probe occasionally; if the backend recovers it is high-value, low-effort.
 
 - **instaffo.com** — no public job listings exist at all. It is a *reverse* marketplace: companies
   search a candidate pool. `/en/talent` is a signup funnel, `/jobs` and `/en/jobs` 404, the city
@@ -215,6 +231,19 @@ check it. Merging to `main` deploys nothing.
 
 ## Gotchas
 
+- ⚠️ **Two bugs silently stopped NEW jobs being categorised. Both are fixed; know the shape.**
+  Newly *inserted* jobs get their mappings from `resolveInsertedIds()`, a path with no fallback —
+  when it fails, rows land uncategorised with **no error**, and only pick up categories if a later
+  run re-scrapes them via the `existing` branch. Anything outside its board's recency window stays
+  uncategorised forever. This is a large part of the 17,228-row backlog measured 2026-09-18.
+  1. A literal **NUL byte** sat where a space belonged in the lookup key, so it never matched
+     `pendingCategories`. Fixed 26f000b; `test/uploader.integration.test.js` pins it.
+  2. PostgREST puts `.in()` lists in the **query string**, so batches are bounded by URL length,
+     not row count. 500 ids built an 18-25 KB URL that the edge rejects as a bare
+     `TypeError: fetch failed`. Use `chunkByUrlBudget()` for every `.in()` — never `chunk()`.
+     Fixed 1bc6e61. Symptom to watch for: `Batched job lookup failed` in the run log.
+
+
 - **Configured slices rot silently.** Found 2026-09-18: 4 of RealWorkFromAnywhere's 5 RSS feeds
   returned HTTP 404 (it had been contributing design jobs only) and CutShort's `/jobs/product-jobs`
   and `/jobs/design-jobs` returned 55 KB empty shells. Both hid behind a per-slice try/catch whose
@@ -286,3 +315,31 @@ check it. Merging to `main` deploys nothing.
   comma-split branch (via `ISO_CODES`), never in free text, because NO/IN/IT/IS/AT/BE are English
   words — and that branch runs **before** the US-state check, since DE/IN/LA/MS/OK/OR/PA/WA are both
   ISO codes and US state abbreviations ("Berlin, DE" used to resolve to US).
+- **Hyriko**: SSR listing + JSON-LD detail across five paths (`/jobs`, `/internships`,
+  `/remote-jobs`, `/us/jobs`, `/ca/jobs`), `?page=N` works. ⚠️ `robots.txt` disallows `/api/` —
+  HTML only. ⚠️ Do NOT take the job id from the RSC payload: the page carries several `jobId`
+  values (save-button and related-jobs widgets) and the first is not the current job's — that gave
+  every posting the same `external_job_id`, which would collapse the board into one row. Use the
+  URL slug. `addressLocality` already contains "City, Region, Country", so joining all three
+  address fields yields "Bengaluru, Karnataka, India, Karnataka, IN".
+- **GetSetHire**: `GET https://api.getsethire.in/jobs?limit=2000` returns the whole corpus (~515)
+  in one unauthenticated call. `page`/`offset` are ignored; only `limit` works. ⚠️ Rows are thin
+  by nature — `/jobs` is the ONLY endpoint, there is no description or apply URL, and the SPA has
+  no per-job route, so every row shares one `source_url`. `api.getsethire.in/robots.txt` is
+  Cloudflare's default content-signals preamble: it declares no signals and carries no
+  `Disallow`, so by its own clause (c) it neither grants nor restricts.
+- **EchoJobs**: behind a **Vercel Security Checkpoint** — axios/curl always gets a 429 challenge
+  page, so it drives a stealth browser. The checkpoint clears in ~12-45s on the FIRST navigation
+  and ~1-5s after, because clearance lives on the browser context: share one context per run.
+  Wait on rendered content, not the title — the title flips several seconds before the list
+  appears. ⚠️ Pagination is unsolved: `?page=N` renders nothing, it is not infinite-scroll, and
+  the "Next →" control ignores `locator.click()`. Page one is a reliable 20 links.
+  ⚠️ `addressCountry` is WRONG on this board — it reads "United States" for plainly foreign roles
+  ("Bedford, Bedfordshire, GB" and a Berlin posting were both stamped US). Resolve country from
+  the locality/region string first. `robots.txt` disallows `/_next/data/`, the obvious Next.js
+  shortcut.
+- **HuntYourTribe**: an ATS, not a board — volume is bounded by its customer list (~169 URLs).
+  ⚠️ No `JobPosting` JSON-LD at all, and the RSC payload stores description/company/skills as
+  reference pointers (`"$29"`) rather than inline, so fields come from the rendered DOM: `h1`,
+  `og:title` ("Title at Company"), and the single Tailwind `div.prose` container. `location` IS
+  inline in the RSC. A redesign breaks this; it degrades to `[]` and logs SLICE ROT.
