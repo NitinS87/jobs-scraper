@@ -29,12 +29,22 @@ const LISTING_PATHS = [
   '/ca/jobs',
 ];
 
-// ⚠️ PACE THIS BOARD GENTLY. Testing it 4-5 times in quick succession with caps
-// up to 160 got the developer IP blocked at the TCP layer — DNS still resolved
-// but port 443 stopped accepting connections entirely, and every listing fetch
-// timed out (verified 2026-09-22; huntyourtribe and echojobs were unaffected
-// from the same machine, so it was specific to this host). The earlier defaults
-// issued ~350 requests in a couple of minutes. These are deliberately slower.
+// ⚠️ THIS HOST WENT DARK ON 2026-09-22 and may still be down. It served real
+// content earlier the same day (339 jobs ingested, fully categorised), then
+// stopped accepting TCP connections on :443 entirely — from this machine, from
+// GitHub Actions runners, and through a third-party proxy. DNS resolves to
+// 222.167.207.56, a China Telecom address, which is not plausible for an Indian
+// job board, so this looks like a DNS change or lapse rather than rate limiting.
+// It was NOT us being blocked: huntyourtribe and echojobs answered normally from
+// the same machine at the same moment.
+//
+// The scraper needs no changes for that — it degrades to [] and
+// reportSliceHealth logs SLICE ROT. Check with:
+//     node scripts/probe-slices.js hyriko
+// or the "Probe Slices" workflow, which runs from GitHub's network.
+//
+// Pacing was relaxed anyway (the old defaults issued ~350 requests in a couple
+// of minutes, which is impolite regardless of who is at fault).
 const MAX_JOBS = Number(process.env.HYRIKO_MAX_JOBS) || 150;
 const MAX_PAGES = Number(process.env.HYRIKO_MAX_PAGES) || 6;
 const SOFT_DEADLINE_MS = Number(process.env.HYRIKO_DEADLINE_MS) || 3 * 60 * 1000;

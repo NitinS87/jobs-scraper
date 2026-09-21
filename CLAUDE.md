@@ -315,7 +315,12 @@ check it. Merging to `main` deploys nothing.
   comma-split branch (via `ISO_CODES`), never in free text, because NO/IN/IT/IS/AT/BE are English
   words — and that branch runs **before** the US-state check, since DE/IN/LA/MS/OK/OR/PA/WA are both
   ISO codes and US state abbreviations ("Berlin, DE" used to resolve to US).
-- **Hyriko**: SSR listing + JSON-LD detail across five paths (`/jobs`, `/internships`,
+- **Hyriko**: ⚠️ **the host stopped accepting TCP connections on 2026-09-22** — unreachable from
+  this machine, from GitHub Actions and via a third-party proxy, having served content normally
+  hours earlier. DNS points at 222.167.207.56 (China Telecom), implausible for an Indian job
+  board, so suspect a DNS lapse rather than a block. Verify with `node scripts/probe-slices.js
+  hyriko` before assuming the scraper is at fault. When up: SSR listing + JSON-LD detail across
+  five paths (`/jobs`, `/internships`,
   `/remote-jobs`, `/us/jobs`, `/ca/jobs`), `?page=N` works. ⚠️ `robots.txt` disallows `/api/` —
   HTML only. ⚠️ Do NOT take the job id from the RSC payload: the page carries several `jobId`
   values (save-button and related-jobs widgets) and the first is not the current job's — that gave
