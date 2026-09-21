@@ -57,6 +57,15 @@ const BOARDS = {
     // "one URL returned 200".
     delayMs: 6000,
   },
+  hyriko: {
+    // Added after the developer IP was blocked at the TCP layer by over-eager
+    // testing: this makes it checkable from GitHub's network instead.
+    slices: ['/jobs', '/internships', '/remote-jobs', '/us/jobs', '/ca/jobs'],
+    url: (s) => `https://hyriko.com${s}`,
+    count: (html) => new Set((html.match(/href="\/jobs\/[^"#?]+"/g) || [])).size,
+    playwright: false,
+    delayMs: 3000,
+  },
   avjobs: {
     slices: [
       'rss_public_mgt_eng.asp', 'rss_public_all.asp', 'rss_public_maint.asp',

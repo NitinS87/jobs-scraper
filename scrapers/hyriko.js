@@ -29,13 +29,20 @@ const LISTING_PATHS = [
   '/ca/jobs',
 ];
 
-const MAX_JOBS = Number(process.env.HYRIKO_MAX_JOBS) || 300;
-const MAX_PAGES = Number(process.env.HYRIKO_MAX_PAGES) || 10;
+// ⚠️ PACE THIS BOARD GENTLY. Testing it 4-5 times in quick succession with caps
+// up to 160 got the developer IP blocked at the TCP layer — DNS still resolved
+// but port 443 stopped accepting connections entirely, and every listing fetch
+// timed out (verified 2026-09-22; huntyourtribe and echojobs were unaffected
+// from the same machine, so it was specific to this host). The earlier defaults
+// issued ~350 requests in a couple of minutes. These are deliberately slower.
+const MAX_JOBS = Number(process.env.HYRIKO_MAX_JOBS) || 150;
+const MAX_PAGES = Number(process.env.HYRIKO_MAX_PAGES) || 6;
 const SOFT_DEADLINE_MS = Number(process.env.HYRIKO_DEADLINE_MS) || 3 * 60 * 1000;
 
-const DETAIL_BATCH_SIZE = 5;
+const DETAIL_BATCH_SIZE = 3;
+const DETAIL_BATCH_DELAY_MS = 1500;
 const REQUEST_TIMEOUT = 30000;
-const PAGE_DELAY_MS = 400;
+const PAGE_DELAY_MS = 1000;
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 const JOB_HREF = /href="(\/jobs\/[^"#?]+)"/g;
@@ -276,7 +283,7 @@ async function scrapeHyriko() {
     urls,
     DETAIL_BATCH_SIZE,
     fetchDetailPage,
-    500,
+    DETAIL_BATCH_DELAY_MS,
     () => Date.now() > deadline,
   );
   const jobs = results.filter(Boolean);

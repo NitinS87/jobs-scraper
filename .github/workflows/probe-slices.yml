@@ -21,6 +21,7 @@ on:
           - naukrigulf
           - jobsinjapan
           - avjobs
+          - hyriko
 
 # Shares the scrape group so a probe can never run against a board while the
 # scheduled scrape is hitting the same site.
