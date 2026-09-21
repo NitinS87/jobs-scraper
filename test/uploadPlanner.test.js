@@ -6,6 +6,7 @@ const {
   classifyJob,
   planCategorySync,
   chunk,
+  chunkByUrlBudget,
   stripUnwritableOnUpdate,
   groupByKeySignature,
 } = require('../lib/uploadPlanner');
@@ -207,4 +208,34 @@ test('posted_at is still written even though it is not hashed', () => {
   // Excluded from the hash, not from the payload.
   const out = stripUnwritableOnUpdate({ title: 'X', posted_at: '2026-09-07T00:00:00.000Z' });
   assert.equal(out.posted_at, '2026-09-07T00:00:00.000Z');
+});
+
+test('chunkByUrlBudget keeps slices within the character budget', () => {
+  // PostgREST puts .in() lists in the query string. 500 ids of ~48 chars build
+  // an ~24 KB URL that the edge rejects as a bare "TypeError: fetch failed" —
+  // measured 2026-09-20 on a 396-job GetSetHire insert, which silently lost the
+  // category mappings for every one of those jobs.
+  const ids = Array.from({ length: 396 }, (_, i) => `getsethire-d9967eca-e37c-4f09-90b1-${String(i).padStart(12, '0')}`);
+  const slices = chunkByUrlBudget(ids, 500);
+
+  assert.ok(slices.length > 1, 'a 396-id batch must be split, not sent as one URL');
+  for (const slice of slices) {
+    assert.ok(slice.join(',').length <= 3000, `slice of ${slice.length} exceeded the URL budget`);
+  }
+  assert.equal(slices.flat().length, ids.length, 'no id may be dropped');
+  assert.deepEqual(slices.flat(), ids, 'order must be preserved');
+});
+
+test('chunkByUrlBudget still honours the count cap for short values', () => {
+  const ids = Array.from({ length: 250 }, (_, i) => `x${i}`);
+  const slices = chunkByUrlBudget(ids, 100);
+  assert.deepEqual(slices.map((s) => s.length), [100, 100, 50]);
+});
+
+test('chunkByUrlBudget never emits an empty slice, even for oversized values', () => {
+  // A single value longer than the whole budget still has to go somewhere.
+  const huge = 'y'.repeat(5000);
+  const slices = chunkByUrlBudget([huge, 'z'], 500);
+  assert.ok(slices.every((s) => s.length > 0), 'empty slices would send a pointless request');
+  assert.equal(slices.flat().length, 2);
 });
