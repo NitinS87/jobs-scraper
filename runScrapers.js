@@ -64,6 +64,8 @@ const scrapers = [
   { name: 'SourcingXpress', fn: require('./scrapers/sourcingxpress') },
   { name: 'Cimix', fn: require('./scrapers/cimix') },
   { name: 'WorkInDenmark', fn: require('./scrapers/workindenmark') },
+  // One unauthenticated API call for the whole board — cheapest scraper here.
+  { name: 'GetSetHire', fn: require('./scrapers/getsethire'), timeoutMs: 60 * 1000 },
   // Aggregates company career pages for IN/US/CA. Cheap (axios + cheerio, no
   // browser) and carries full JSON-LD, so it sits ahead of the windowed boards.
   { name: 'Hyriko', fn: require('./scrapers/hyriko'), timeoutMs: 4 * 60 * 1000 },

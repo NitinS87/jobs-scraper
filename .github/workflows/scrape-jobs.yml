@@ -78,6 +78,7 @@ jobs:
           CUTSHORT_MAX_JOBS: ${{ vars.CUTSHORT_MAX_JOBS || '300' }}
           HYRIKO_MAX_JOBS: ${{ vars.HYRIKO_MAX_JOBS || '300' }}
           HYRIKO_MAX_PAGES: ${{ vars.HYRIKO_MAX_PAGES || '10' }}
+          GETSETHIRE_MAX_JOBS: ${{ vars.GETSETHIRE_MAX_JOBS || '1000' }}
           TEAL_MAX_QUERIES: ${{ vars.TEAL_MAX_QUERIES || '14' }}
           # Keep mappings additive for the first week after the matcher change:
           # the uploader reconciles categories for unchanged jobs, so the first
