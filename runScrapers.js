@@ -69,6 +69,8 @@ const scrapers = [
   // Aggregates company career pages for IN/US/CA. Cheap (axios + cheerio, no
   // browser) and carries full JSON-LD, so it sits ahead of the windowed boards.
   { name: 'Hyriko', fn: require('./scrapers/hyriko'), timeoutMs: 4 * 60 * 1000 },
+  // ATS product rather than a board: volume is bounded by its customer list.
+  { name: 'HuntYourTribe', fn: require('./scrapers/huntyourtribe'), timeoutMs: 4 * 60 * 1000 },
 
   // Recency-windowed high-volume sources (see lib/recency.js). Ordered
   // cheapest-first: Teal/JobStairs/EnglishJobs need no per-job detail page, so

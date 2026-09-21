@@ -81,6 +81,7 @@ jobs:
           GETSETHIRE_MAX_JOBS: ${{ vars.GETSETHIRE_MAX_JOBS || '1000' }}
           ECHOJOBS_MAX_JOBS: ${{ vars.ECHOJOBS_MAX_JOBS || '20' }}
           ECHOJOBS_DELAY_MS: ${{ vars.ECHOJOBS_DELAY_MS || '8000' }}
+          HUNTYOURTRIBE_MAX_JOBS: ${{ vars.HUNTYOURTRIBE_MAX_JOBS || '150' }}
           TEAL_MAX_QUERIES: ${{ vars.TEAL_MAX_QUERIES || '14' }}
           # Keep mappings additive for the first week after the matcher change:
           # the uploader reconciles categories for unchanged jobs, so the first
