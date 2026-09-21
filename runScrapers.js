@@ -79,6 +79,11 @@ const scrapers = [
   { name: 'FINN', fn: require('./scrapers/finn'), timeoutMs: 6 * 60 * 1000 },
   { name: 'JobbSafari', fn: require('./scrapers/jobbsafari'), timeoutMs: 6 * 60 * 1000 },
 
+  // Vercel-checkpointed and paced at 8s/detail, so it is the most expensive
+  // job-per-second here — last before the Tier C entries, and the first thing
+  // to cut if the run budget overruns.
+  { name: 'EchoJobs', fn: require('./scrapers/echojobs'), timeoutMs: 7 * 60 * 1000 },
+
   { name: 'Wellfound', fn: require('./scrapers/wellfound'), optional: true },
   { name: 'SimplyHiredIN', fn: require('./scrapers/simplyhired'), optional: true },
 ];
