@@ -127,8 +127,16 @@ async function run() {
       break;
     }
 
+    // Per-scraper timeouts in the registry are sized for the 6-hourly cron. A
+    // full backfill needs them to EXPAND, not cap: Math.min() here meant Teal
+    // got its 4-minute cron slice even with FULL_BACKFILL=true, cutting a board
+    // that holds tens of thousands of listings long before it was exhausted.
+    const scraperCap = recency.fullBackfill
+      ? Math.max(timeoutMs || 0, DEFAULT_SCRAPER_TIMEOUT_MS)
+      : (timeoutMs || DEFAULT_SCRAPER_TIMEOUT_MS);
+
     const slice = Math.min(
-      timeoutMs || DEFAULT_SCRAPER_TIMEOUT_MS,
+      scraperCap,
       Math.max(left - MIN_SLICE_MS, MIN_SLICE_MS)
     );
 
