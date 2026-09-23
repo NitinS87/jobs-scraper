@@ -37,6 +37,10 @@ const RUN_BUDGET_MS = recency.fullBackfill
 
 // Don't start a scraper we can't give a fair slice of time to.
 const MIN_SLICE_MS = 45 * 1000;
+
+// The hard per-scraper kill is this much larger than the scraper's own soft
+// deadline, so a scraper always gets to return its partial results.
+const TIMEOUT_HEADROOM = Number(process.env.SCRAPER_TIMEOUT_HEADROOM) || 1.25;
 const UPLOAD_TIMEOUT_MS = Number(process.env.UPLOAD_TIMEOUT_MS) || 10 * 60 * 1000;
 
 // Comma-separated name filters, for targeted backfills: SCRAPER_ONLY=JobbSafari
@@ -79,7 +83,10 @@ const scrapers = [
   { name: 'JobStairs', fn: require('./scrapers/jobstairs'), timeoutMs: 6 * 60 * 1000 },
   { name: 'EnglishJobs', fn: require('./scrapers/englishjobs'), timeoutMs: 4 * 60 * 1000 },
   { name: 'FINN', fn: require('./scrapers/finn'), timeoutMs: 6 * 60 * 1000 },
-  { name: 'JobbSafari', fn: require('./scrapers/jobbsafari'), timeoutMs: 6 * 60 * 1000 },
+  // Cloudflare started 403ing every path on 2026-09-22 — an empty 6 KB body,
+  // and the stealth browser does not get through either. Gated so it stops
+  // spending run budget on a wall; set ENABLE_TIER_C_SCRAPERS=true to retry.
+  { name: 'JobbSafari', fn: require('./scrapers/jobbsafari'), timeoutMs: 6 * 60 * 1000, optional: true },
 
   // Vercel-checkpointed and paced at 8s/detail, so it is the most expensive
   // job-per-second here — last before the Tier C entries, and the first thing
@@ -127,8 +134,23 @@ async function run() {
       break;
     }
 
+    // Per-scraper timeouts in the registry are sized for the 6-hourly cron. A
+    // full backfill needs them to EXPAND, not cap: Math.min() here meant Teal
+    // got its 4-minute cron slice even with FULL_BACKFILL=true, cutting a board
+    // that holds tens of thousands of listings long before it was exhausted.
+    const scraperCap = recency.fullBackfill
+      ? Math.max(timeoutMs || 0, DEFAULT_SCRAPER_TIMEOUT_MS)
+      : (timeoutMs || DEFAULT_SCRAPER_TIMEOUT_MS);
+
+    // Headroom between a scraper's own soft deadline and this hard kill. A
+    // scraper that stops at its soft deadline still has to return, and its
+    // caller still has to upload. Measured 2026-09-23: GulfTalent's soft
+    // deadline and this timeout were both 60 min, withTimeout fired first, and
+    // 5,731 already-fetched jobs were discarded with the rejected promise.
+    const hardTimeout = Math.round(scraperCap * TIMEOUT_HEADROOM);
+
     const slice = Math.min(
-      timeoutMs || DEFAULT_SCRAPER_TIMEOUT_MS,
+      hardTimeout,
       Math.max(left - MIN_SLICE_MS, MIN_SLICE_MS)
     );
 

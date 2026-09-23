@@ -24,6 +24,10 @@ on:
         description: 'Window in days (ignored when full_backfill is true)'
         required: false
         default: '90'
+      deadline_ms:
+        description: Per-scraper soft deadline in ms (backfill needs these lifted too)
+        required: false
+        default: '3600000'
       max_jobs:
         description: 'Per-scraper cap, applied to every *_MAX_JOBS'
         required: false
@@ -70,9 +74,55 @@ jobs:
           SCRAPER_ONLY: ${{ inputs.scraper }}
           FULL_BACKFILL: ${{ inputs.full_backfill }}
           RECENCY_DAYS: ${{ inputs.recency_days }}
+          # Every board's cap, not just the five original high-volume ones.
+          # Leaving the rest out meant a "full" backfill still held EchoJobs to
+          # 20 jobs, NaukriGulf to 100 and WeWorkRemotely to 250.
           TEAL_MAX_JOBS: ${{ inputs.max_jobs }}
           JOBSTAIRS_MAX_JOBS: ${{ inputs.max_jobs }}
           ENGLISHJOBS_MAX_JOBS: ${{ inputs.max_jobs }}
           FINN_MAX_JOBS: ${{ inputs.max_jobs }}
           JOBBSAFARI_MAX_JOBS: ${{ inputs.max_jobs }}
+          ECHOJOBS_MAX_JOBS: ${{ inputs.max_jobs }}
+          GETSETHIRE_MAX_JOBS: ${{ inputs.max_jobs }}
+          HUNTYOURTRIBE_MAX_JOBS: ${{ inputs.max_jobs }}
+          HYRIKO_MAX_JOBS: ${{ inputs.max_jobs }}
+          NAUKRIGULF_MAX_JOBS: ${{ inputs.max_jobs }}
+          WEWORKREMOTELY_MAX_JOBS: ${{ inputs.max_jobs }}
+          CUTSHORT_MAX_JOBS: ${{ inputs.max_jobs }}
+          CIMIX_MAX_JOBS: ${{ inputs.max_jobs }}
+          GULFTALENT_MAX_JOBS: ${{ inputs.max_jobs }}
+          WORKINDENMARK_MAX_JOBS: ${{ inputs.max_jobs }}
+          # Teal scraped 11,969 jobs in the 2026-09-22 backfill but the upload
+          # was killed at the 10-minute cron default, discarding ~5,000 of
+          # them. The write path has to scale with the scrape.
+          UPLOAD_TIMEOUT_MS: ${{ inputs.deadline_ms }}
+          ENGLISHJOBS_MAX_PAGES: '400'
+          HYRIKO_MAX_PAGES: '500'
+          JOBBSAFARI_MAX_PAGES: '2000'
+          # Internal soft deadlines are sized for the cron (2-6.5 min) and would
+          # otherwise stop each board long before its cap.
+          TEAL_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          JOBSTAIRS_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          ENGLISHJOBS_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          FINN_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          JOBBSAFARI_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          ECHOJOBS_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          HUNTYOURTRIBE_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          HYRIKO_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          NAUKRIGULF_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          WEWORKREMOTELY_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          CUTSHORT_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          # Added after the 2026-09-23 run: GulfTalent paged 36,625 jobs and kept
+          # 3,052 candidates, then hit its 5-minute default deadline with ZERO
+          # detail pages fetched, because this var was never wired up.
+          GULFTALENT_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          NCS_DEADLINE_MS: ${{ inputs.deadline_ms }}
+          NCS_MAX_JOBS: ${{ inputs.max_jobs }}
+          # Smaller write batches: 500 rows of ~9 KB exceeded the statement
+          # timeout three times in that run, discarding 1,500 scraped jobs.
+          WRITE_CHUNK_SIZE: '200'
+          SCRAPER_TIMEOUT_MS: ${{ inputs.deadline_ms }}
+          # Keep the backfill additive: a run this size must not be able to
+          # delete mappings across the existing corpus.
+          CATEGORY_ADDITIVE_ONLY: 'true'
         run: node runScrapers.js

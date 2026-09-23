@@ -30,7 +30,11 @@ const BASE = 'https://englishjobs.de';
 
 const MAX_JOBS = Number(process.env.ENGLISHJOBS_MAX_JOBS) || 500;
 const PER_PAGE = 20;
-const MAX_PAGES_PER_REGION = 25;
+// Env-driven so a backfill can lift it: every slice stopped at exactly
+// [max-pages] seen=500 kept=500 with zero stale rows in the 2026-09-22
+// backfill, i.e. the board had more to give and this constant was the
+// binding limit, not ENGLISHJOBS_MAX_JOBS.
+const MAX_PAGES_PER_REGION = Number(process.env.ENGLISHJOBS_MAX_PAGES) || 25;
 const REQUEST_TIMEOUT = 45000;
 const SOFT_DEADLINE_MS = Number(process.env.ENGLISHJOBS_DEADLINE_MS) || 3.5 * 60 * 1000;
 
