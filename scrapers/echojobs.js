@@ -65,10 +65,18 @@ async function gotoCleared(page, url, { needsLinks = false } = {}) {
   while (Date.now() - started < CHECKPOINT_TIMEOUT_MS) {
     const title = await page.title().catch(() => '');
     if (!isCheckpoint(title)) {
-      const html = await page.content();
-      if (!needsLinks) return { html, ok: true };
-      JOB_HREF.lastIndex = 0;
-      if (JOB_HREF.test(html)) return { html, ok: true };
+      // The checkpoint clears by REDIRECTING, so this can land mid-navigation:
+      // "page.content: Unable to retrieve content because the page is
+      // navigating and changing the content". That threw out of the scraper and
+      // killed the whole board (measured 2026-09-23 — EchoJobs returned 0 in CI
+      // while working locally, because the runner is slower and hit the race
+      // more often). A navigation in flight means "not ready yet", not "fatal".
+      const html = await page.content().catch(() => null);
+      if (html !== null) {
+        if (!needsLinks) return { html, ok: true };
+        JOB_HREF.lastIndex = 0;
+        if (JOB_HREF.test(html)) return { html, ok: true };
+      }
     }
     await page.waitForTimeout(3000);
   }

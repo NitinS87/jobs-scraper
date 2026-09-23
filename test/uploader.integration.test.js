@@ -420,3 +420,20 @@ test('a statement timeout on a big batch is retried in halves, not discarded', a
   assert.equal(stats.errors, 0, 'a timeout that succeeds on retry must not be counted as lost rows');
   assert.equal(stats.inserted, 60, 'every row must still land');
 });
+test('duplicate external_job_ids are deduped, not allowed to kill the batch', async () => {
+  // Measured 2026-09-23: TokyoDev emitted repeated external_job_ids and the
+  // upsert failed with "ON CONFLICT DO UPDATE command cannot affect row a
+  // second time", losing 132 of 137 jobs inside a run that reported ok.
+  const jobs = [makeJob(1), makeJob(2), makeJob(1), makeJob(3)];
+
+  const { uploader, calls } = installMock(handlersFor({}, COMPANIES));
+  const stats = await uploader.processScraperResults(jobs);
+
+  const upserts = calls.filter((c) => c.table === 'jobs' && c.op === 'upsert');
+  const payload = upserts.flatMap((c) => c.payload);
+  const keys = payload.map((r) => `${r.external_source}|${r.external_job_id}`);
+
+  assert.equal(new Set(keys).size, keys.length,
+    `payload must not repeat a conflict key, got ${keys.join(', ')}`);
+  assert.equal(stats.errors, 0, 'a duplicate must not cost the batch');
+});
