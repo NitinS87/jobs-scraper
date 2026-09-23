@@ -388,3 +388,35 @@ test('newly inserted jobs get their category mappings in the same run', async ()
     'every inserted job id must appear in the mapping writes',
   );
 });
+
+test('a statement timeout on a big batch is retried in halves, not discarded', async () => {
+  // Measured 2026-09-23 during a full backfill: three 500-row batches died with
+  // "canceling statement due to statement timeout" and 1,500 already-scraped
+  // jobs were counted as errors and thrown away. The rows were fine; the batch
+  // was too big for one statement.
+  // Above MIN_WRITE_CHUNK_SIZE (25), below which a timeout is a real failure.
+  const jobs = Array.from({ length: 60 }, (_, i) => makeJob(i + 1));
+
+  let firstBatchSeen = false;
+  const { uploader, calls } = installMock((s) => {
+    if (s.table === 'jobs' && s.op === 'upsert') {
+      // Fail only the first full-size batch; halves must then succeed.
+      if (!firstBatchSeen && s.payload.length === 60) {
+        firstBatchSeen = true;
+        return { data: null, error: { code: '57014', message: 'canceling statement due to statement timeout' } };
+      }
+      return { data: null, error: null };
+    }
+    return handlersFor({}, COMPANIES)(s);
+  });
+
+  const stats = await uploader.processScraperResults(jobs);
+
+  const upserts = calls.filter((c) => c.table === 'jobs' && c.op === 'upsert');
+  const sizes = upserts.map((c) => c.payload.length);
+
+  assert.ok(firstBatchSeen, 'precondition: the oversized batch must have been attempted');
+  assert.ok(sizes.length >= 3, `expected a retry in halves, saw batches ${sizes.join(',')}`);
+  assert.equal(stats.errors, 0, 'a timeout that succeeds on retry must not be counted as lost rows');
+  assert.equal(stats.inserted, 60, 'every row must still land');
+});
