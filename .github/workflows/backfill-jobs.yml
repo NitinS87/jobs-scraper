@@ -92,6 +92,11 @@ jobs:
           CIMIX_MAX_JOBS: ${{ inputs.max_jobs }}
           GULFTALENT_MAX_JOBS: ${{ inputs.max_jobs }}
           WORKINDENMARK_MAX_JOBS: ${{ inputs.max_jobs }}
+          # Teal scraped 11,969 jobs in the 2026-09-22 backfill but the upload
+          # was killed at the 10-minute cron default, discarding ~5,000 of
+          # them. The write path has to scale with the scrape.
+          UPLOAD_TIMEOUT_MS: ${{ inputs.deadline_ms }}
+          ENGLISHJOBS_MAX_PAGES: '400'
           HYRIKO_MAX_PAGES: '500'
           JOBBSAFARI_MAX_PAGES: '2000'
           # Internal soft deadlines are sized for the cron (2-6.5 min) and would

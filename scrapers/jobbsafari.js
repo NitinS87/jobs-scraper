@@ -32,6 +32,11 @@ const { isWithinWindow, getRecencyConfig } = require('../lib/recency');
 //    description cuts further. That is the cost of the English-only policy.
 //  - Detail pages carry a clean JSON-LD JobPosting but NO addressCountry, so the
 //    country is hardcoded to SE.
+// ⚠ BLOCKED since 2026-09-22: Cloudflare returns HTTP 403 with an empty ~6 KB
+// body on every path (/, /lediga-jobb, /lediga-jobb?page=N), and
+// launchStealthBrowser does not get through either — same wall as careerjet.se.
+// The scraper is registered `optional` in runScrapers.js so it no longer spends
+// run budget; re-enable with ENABLE_TIER_C_SCRAPERS=true once the block lifts.
 const BASE = 'https://jobbsafari.se';
 const LISTING = (page) => `${BASE}/lediga-jobb?page=${page}`;
 

@@ -79,7 +79,10 @@ const scrapers = [
   { name: 'JobStairs', fn: require('./scrapers/jobstairs'), timeoutMs: 6 * 60 * 1000 },
   { name: 'EnglishJobs', fn: require('./scrapers/englishjobs'), timeoutMs: 4 * 60 * 1000 },
   { name: 'FINN', fn: require('./scrapers/finn'), timeoutMs: 6 * 60 * 1000 },
-  { name: 'JobbSafari', fn: require('./scrapers/jobbsafari'), timeoutMs: 6 * 60 * 1000 },
+  // Cloudflare started 403ing every path on 2026-09-22 — an empty 6 KB body,
+  // and the stealth browser does not get through either. Gated so it stops
+  // spending run budget on a wall; set ENABLE_TIER_C_SCRAPERS=true to retry.
+  { name: 'JobbSafari', fn: require('./scrapers/jobbsafari'), timeoutMs: 6 * 60 * 1000, optional: true },
 
   // Vercel-checkpointed and paced at 8s/detail, so it is the most expensive
   // job-per-second here — last before the Tier C entries, and the first thing
