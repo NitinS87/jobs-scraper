@@ -37,6 +37,10 @@ const RUN_BUDGET_MS = recency.fullBackfill
 
 // Don't start a scraper we can't give a fair slice of time to.
 const MIN_SLICE_MS = 45 * 1000;
+
+// The hard per-scraper kill is this much larger than the scraper's own soft
+// deadline, so a scraper always gets to return its partial results.
+const TIMEOUT_HEADROOM = Number(process.env.SCRAPER_TIMEOUT_HEADROOM) || 1.25;
 const UPLOAD_TIMEOUT_MS = Number(process.env.UPLOAD_TIMEOUT_MS) || 10 * 60 * 1000;
 
 // Comma-separated name filters, for targeted backfills: SCRAPER_ONLY=JobbSafari
@@ -138,8 +142,15 @@ async function run() {
       ? Math.max(timeoutMs || 0, DEFAULT_SCRAPER_TIMEOUT_MS)
       : (timeoutMs || DEFAULT_SCRAPER_TIMEOUT_MS);
 
+    // Headroom between a scraper's own soft deadline and this hard kill. A
+    // scraper that stops at its soft deadline still has to return, and its
+    // caller still has to upload. Measured 2026-09-23: GulfTalent's soft
+    // deadline and this timeout were both 60 min, withTimeout fired first, and
+    // 5,731 already-fetched jobs were discarded with the rejected promise.
+    const hardTimeout = Math.round(scraperCap * TIMEOUT_HEADROOM);
+
     const slice = Math.min(
-      scraperCap,
+      hardTimeout,
       Math.max(left - MIN_SLICE_MS, MIN_SLICE_MS)
     );
 
