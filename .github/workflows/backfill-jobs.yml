@@ -77,6 +77,10 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SCRAPER_ONLY: ${{ inputs.scraper }}
           FULL_BACKFILL: ${{ inputs.full_backfill }}
+          # Every run of THIS workflow is a backfill, windowed or not. Without
+          # this a windowed run inherits the cron's budget and per-scraper
+          # timeouts (see the comment in runScrapers.js).
+          BACKFILL_MODE: 'true'
           RECENCY_DAYS: ${{ inputs.recency_days }}
           # Every board's cap, not just the five original high-volume ones.
           # Leaving the rest out meant a "full" backfill still held EchoJobs to

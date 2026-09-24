@@ -18,10 +18,19 @@ process.on('unhandledRejection', (reason) => {
 const RUN_STARTED_AT = Date.now();
 const recency = getRecencyConfig();
 
+// "Is this a long manual backfill?" is NOT the same question as "is the recency
+// window off?", and conflating them cost two runs. A WINDOWED backfill — the
+// normal way to ask for "the last 30 days" — left every cron limit in force:
+// run 36007358471 died at the 50-minute cron budget after 11 of 24 boards, and
+// run 36018586627 then gave Teal and EnglishJobs their 4-minute registry slices
+// and lost both boards' work to a timeout. Backfill mode is now explicit.
+const BACKFILL_MODE = recency.fullBackfill
+  || /^(1|true|yes|on)$/i.test(process.env.BACKFILL_MODE || '');
+
 // Per-scraper hang guard. This is NOT the budget — RUN_BUDGET_MS is.
 const DEFAULT_SCRAPER_TIMEOUT_MS =
   Number(process.env.SCRAPER_TIMEOUT_MS) ||
-  (recency.fullBackfill ? 60 * 60 * 1000 : 5 * 60 * 1000);
+  (BACKFILL_MODE ? 60 * 60 * 1000 : 5 * 60 * 1000);
 
 // Soft cap on the whole run. CI's timeout-minutes is the hard kill; this lets us
 // exit cleanly with a summary before GitHub SIGKILLs us mid-upload. Disabled
@@ -31,7 +40,7 @@ const DEFAULT_SCRAPER_TIMEOUT_MS =
 // min (GulfTalent 6.6, NaukriGulf 4.3, Cimix 4.0, YCombinator 3.7, HNHiring
 // 3.1), so a 35-min budget starved every new source at the tail. 50 min leaves
 // the five recency-windowed boards real runway under a 60-min CI hard cap.
-const RUN_BUDGET_MS = recency.fullBackfill
+const RUN_BUDGET_MS = BACKFILL_MODE
   ? Infinity
   : Number(process.env.RUN_BUDGET_MS) || 50 * 60 * 1000;
 
@@ -105,7 +114,8 @@ async function run() {
   // Verticals rotate per run so the whole-run budget is not blown fetching all
   // 19 taxonomy roots from every board; the corpus accumulates across runs.
   console.log(`Verticals: ${getActiveVerticals().label}`);
-  console.log(`Run budget: ${RUN_BUDGET_MS === Infinity ? 'unlimited' : `${mins(RUN_BUDGET_MS)} min`}`);
+  console.log(`Run budget: ${RUN_BUDGET_MS === Infinity ? 'unlimited' : `${mins(RUN_BUDGET_MS)} min`}`
+    + `${BACKFILL_MODE ? ' (backfill mode)' : ''}`);
   if (only.length) console.log(`SCRAPER_ONLY: ${only.join(', ')}`);
   if (skip.length) console.log(`SCRAPER_SKIP: ${skip.join(', ')}`);
 
@@ -138,7 +148,7 @@ async function run() {
     // full backfill needs them to EXPAND, not cap: Math.min() here meant Teal
     // got its 4-minute cron slice even with FULL_BACKFILL=true, cutting a board
     // that holds tens of thousands of listings long before it was exhausted.
-    const scraperCap = recency.fullBackfill
+    const scraperCap = BACKFILL_MODE
       ? Math.max(timeoutMs || 0, DEFAULT_SCRAPER_TIMEOUT_MS)
       : (timeoutMs || DEFAULT_SCRAPER_TIMEOUT_MS);
 
