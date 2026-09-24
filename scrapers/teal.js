@@ -260,7 +260,7 @@ function buildJob(id, listing, a) {
     is_remote: workplace.includes('remote') || /remote/i.test(title),
     location,
     country_code,
-    job_type: mapEmploymentType(a.employment_type || a.job_type) || parsed.job_type || 'FULL_TIME',
+    job_type: mapEmploymentType(a.employment_type || a.job_type) || parsed.job_type,
     experience_level: mapCareerLevel(a.career_levels)
       || parseExperienceLevelFromTitle(title)
       || parsed.experience_level,

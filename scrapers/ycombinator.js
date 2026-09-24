@@ -172,7 +172,7 @@ async function fetchDetailPage(url) {
       is_remote: !!isRemote,
       location,
       country_code,
-      job_type: employmentType || parsed.job_type || 'FULL_TIME',
+      job_type: employmentType || parsed.job_type,
       experience_level: parseExperienceLevelFromTitle(title) || parsed.experience_level,
       salary_min: salary ? salary.min : null,
       salary_max: salary ? salary.max : null,

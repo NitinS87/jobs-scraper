@@ -224,7 +224,7 @@ function buildJob(d, descriptionHtml) {
     is_remote: /remote|homeoffice|home office/i.test(`${title} ${descriptionHtml}`),
     location,
     country_code,
-    job_type: mapJobType(offering) || parsed.job_type || 'FULL_TIME',
+    job_type: mapJobType(offering) || parsed.job_type,
     experience_level: mapExperienceLevel(careerLevel)
       || parseExperienceLevelFromTitle(title)
       || parsed.experience_level,

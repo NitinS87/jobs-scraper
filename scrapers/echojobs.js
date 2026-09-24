@@ -192,7 +192,7 @@ function buildJob(relPath, html) {
       || /\bremote\b/i.test(title),
     location,
     country_code,
-    job_type: mapEmploymentType(ld.employmentType) || parsed.job_type || 'FULL_TIME',
+    job_type: mapEmploymentType(ld.employmentType) || parsed.job_type,
     experience_level: parseExperienceLevelFromTitle(title) || parsed.experience_level,
     salary_min: salary ? salary.min : null,
     salary_max: salary ? salary.max : null,

@@ -106,7 +106,7 @@ function buildJob(raw) {
   const locations = Array.isArray(raw.locations) ? raw.locations : [];
   const locationStr = raw.locationsText || locations.join(', ') || null;
   const isRemote = mapRemote(raw.remoteType);
-  const jobType = mapJobType(raw.roleTypes) || parsed.job_type || 'FULL_TIME';
+  const jobType = mapJobType(raw.roleTypes) || parsed.job_type;
   const expLevel = parseExperienceLevelFromTitle(raw.headline) || parsed.experience_level || (
     raw.expRange?.max != null ? (
       raw.expRange.max <= 2 ? 'ENTRY' :

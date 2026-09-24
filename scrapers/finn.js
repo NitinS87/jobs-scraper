@@ -246,7 +246,7 @@ async function fetchDetail(candidate) {
       is_remote: /remote|hjemmekontor|fjernarbeid/i.test(`${title} ${descText}`),
       location,
       country_code,
-      job_type: mapEmploymentType(ld.employmentType) || parsed.job_type || 'FULL_TIME',
+      job_type: mapEmploymentType(ld.employmentType) || parsed.job_type,
       experience_level: parseExperienceLevelFromTitle(title) || parsed.experience_level,
       salary_min: parsed.salary ? parsed.salary.min : null,
       salary_max: parsed.salary ? parsed.salary.max : null,

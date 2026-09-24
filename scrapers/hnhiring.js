@@ -181,7 +181,7 @@ function parseComment(comment, threadDate) {
   const parsed = parseDescription(wrappedHtml);
 
   const country = parseCountryCode(location || rawText);
-  const jobType = detectJobType(rawText) || 'FULL_TIME';
+  const jobType = detectJobType(rawText);
   const experienceLevel = detectExperienceLevel(title || '', rawText);
 
   const sourceUrl = urlMatch ? urlMatch[1] : HN_ITEM_URL(comment.id);

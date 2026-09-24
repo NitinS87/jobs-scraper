@@ -163,7 +163,7 @@ async function fetchDetailPage(relPath) {
       is_remote: /\bremote\b/i.test(location || '') || /\bremote\b/i.test(title),
       location,
       country_code,
-      job_type: mapJobType(overviewValue($, 'Position Type')) || parsed.job_type || 'FULL_TIME',
+      job_type: mapJobType(overviewValue($, 'Position Type')) || parsed.job_type,
       experience_level: parseExperienceLevelFromTitle(title) || parsed.experience_level,
       salary_min: null,
       salary_max: null,

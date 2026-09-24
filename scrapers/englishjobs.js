@@ -184,7 +184,7 @@ function buildJob(card) {
     is_remote: /remote|home\s*office/i.test(`${card.title} ${card.snippet}`),
     location,
     country_code: 'DE',
-    job_type: parsed.job_type || 'FULL_TIME',
+    job_type: parsed.job_type,
     experience_level: parseExperienceLevelFromTitle(card.title) || parsed.experience_level,
     salary_min: parsed.salary ? parsed.salary.min : null,
     salary_max: parsed.salary ? parsed.salary.max : null,

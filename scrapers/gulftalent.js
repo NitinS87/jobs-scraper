@@ -186,7 +186,7 @@ async function fetchDetailPage(page, candidate) {
       is_remote: /remote/i.test(location || '') || /remote/i.test(title),
       location,
       country_code,
-      job_type: mapEmploymentType(ld.employmentType) || parsed.job_type || 'FULL_TIME',
+      job_type: mapEmploymentType(ld.employmentType) || parsed.job_type,
       experience_level: parseExperienceLevelFromTitle(title) || parsed.experience_level,
       salary_min: (parsed.salary ? parsed.salary.min : null) || candidate.salary_min,
       salary_max: parsed.salary ? parsed.salary.max : null,
