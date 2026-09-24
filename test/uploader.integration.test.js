@@ -437,3 +437,29 @@ test('duplicate external_job_ids are deduped, not allowed to kill the batch', as
     `payload must not repeat a conflict key, got ${keys.join(', ')}`);
   assert.equal(stats.errors, 0, 'a duplicate must not cost the batch');
 });
+
+test('visa_sponsorship keeps its tri-state through the write path', async () => {
+  // The parser was made tri-state (true offered / false refused / null not
+  // mentioned) but the uploader still had
+  //   visa_sponsorship: job.visa_sponsorship || parsed.visa_sponsorship || false
+  // which collapses null to false at the write boundary. 8,092 rows from run
+  // 36024969573 landed with visa_unknown=0 because of it, silently undoing the
+  // fix and marking every silent listing as "explicitly refuses".
+  const jobs = [
+    makeJob(1, { visa_sponsorship: null, description: '<p>Build things.</p>' }),
+    makeJob(2, { visa_sponsorship: true }),
+    makeJob(3, { visa_sponsorship: false }),
+  ];
+
+  const { uploader, calls } = installMock(handlersFor({}, COMPANIES));
+  await uploader.processScraperResults(jobs);
+
+  const written = calls
+    .filter((c) => c.table === 'jobs' && c.op === 'upsert')
+    .flatMap((c) => c.payload);
+  const byId = new Map(written.map((r) => [r.external_job_id, r.visa_sponsorship]));
+
+  assert.equal(byId.get('ext-1'), null, 'an unstated listing must stay null, not become false');
+  assert.equal(byId.get('ext-2'), true);
+  assert.equal(byId.get('ext-3'), false, 'an explicit refusal must stay false');
+});
