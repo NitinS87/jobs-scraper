@@ -33,7 +33,10 @@ const {
   parseExperienceLevelFromTitle,
 } = require('../lib/descriptionParser');
 
-const PAGE_SIZE = 500;
+// Descriptions average ~9 KB, so a 500-row page is a ~4.5 MB read and Postgres
+// cancelled it with a statement timeout partway through the first full pass.
+const PAGE_SIZE = Number(process.env.REPARSE_PAGE_SIZE) || 150;
+const READ_RETRIES = 4;
 const WRITE_CHUNK = 4000;
 const ID_CHUNK = 300; // .in() lists ride in the query string
 
@@ -128,14 +131,24 @@ async function main() {
     let q = supabase
       .from('jobs')
       .select('id, title, description, job_type, experience_level, visa_sponsorship')
-      .order('id')
-      .limit(PAGE_SIZE);
+      .order('id');
     if (cursor) q = q.gt('id', cursor);
     if (args.source) q = q.eq('external_source', args.source);
     if (args.activeOnly) q = q.eq('is_active', true);
 
-    const { data, error } = await q;
-    if (error) throw new Error(`read failed: ${error.message}`);
+    // A statement timeout on the read used to abort the whole pass and leave the
+    // corpus half-corrected. Retry with a smaller page instead.
+    let data = null;
+    for (let attempt = 0; attempt < READ_RETRIES; attempt += 1) {
+      const size = Math.max(25, Math.floor(PAGE_SIZE / (2 ** attempt)));
+      const res = await q.limit(size);
+      if (!res.error) { data = res.data; break; }
+      if (!/statement timeout|57014/i.test(res.error.message)) {
+        throw new Error(`read failed: ${res.error.message}`);
+      }
+      console.warn(`  read timed out at ${size} rows — retrying smaller`);
+      if (attempt === READ_RETRIES - 1) throw new Error('read failed: timed out at minimum page size');
+    }
     if (!data || !data.length) break;
 
     for (const job of data) {
