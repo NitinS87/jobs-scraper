@@ -60,7 +60,7 @@ function buildJob(card) {
     location,
     // NCS is India's National Career Service — every listing is domestic.
     country_code: parseCountryCode(location || '') || 'IN',
-    job_type: card.jobType || parsed.job_type || 'FULL_TIME',
+    job_type: card.jobType || parsed.job_type,
     experience_level: parseExperienceLevelFromTitle(title) || parsed.experience_level,
     salary_min: parsed.salary ? parsed.salary.min : null,
     salary_max: parsed.salary ? parsed.salary.max : null,

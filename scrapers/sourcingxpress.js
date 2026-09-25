@@ -159,7 +159,7 @@ async function fetchDetailPage(id) {
         ? 'INTERNSHIP'
         : /\bcontract\b/i.test(title)
           ? 'CONTRACT'
-          : parsed.job_type || 'FULL_TIME',
+          : parsed.job_type,
       experience_level,
       salary_min: salary ? salary.min : null,
       salary_max: salary ? salary.max : null,

@@ -94,7 +94,7 @@ async function scrapeWorkInDenmark() {
         is_remote: /remote|hjemmearbejde|distancearbejde/i.test(descText) || /remote/i.test(title),
         location,
         country_code: 'DK',
-        job_type: String(ad.workHourPartTime) === 'true' ? 'PART_TIME' : parsed.job_type || 'FULL_TIME',
+        job_type: String(ad.workHourPartTime) === 'true' ? 'PART_TIME' : parsed.job_type,
         experience_level: parseExperienceLevelFromTitle(title) || parsed.experience_level,
         salary_min: parsed.salary ? parsed.salary.min : null,
         salary_max: parsed.salary ? parsed.salary.max : null,

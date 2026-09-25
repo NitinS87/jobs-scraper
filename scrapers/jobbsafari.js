@@ -208,7 +208,7 @@ async function fetchDetail(candidate) {
       location,
       // Detail JSON-LD has no addressCountry and this is a Sweden-only board.
       country_code: 'SE',
-      job_type: mapEmploymentType(ld.employmentType) || parsed.job_type || 'FULL_TIME',
+      job_type: mapEmploymentType(ld.employmentType) || parsed.job_type,
       experience_level: parseExperienceLevelFromTitle(title) || parsed.experience_level,
       salary_min: parsed.salary ? parsed.salary.min : null,
       salary_max: parsed.salary ? parsed.salary.max : null,

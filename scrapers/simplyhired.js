@@ -43,7 +43,7 @@ function buildJobFromCard(card) {
     is_remote: !!card.is_remote,
     location: card.location || null,
     country_code: country,
-    job_type: parsed.job_type || 'FULL_TIME',
+    job_type: parsed.job_type,
     experience_level: parseExperienceLevelFromTitle(card.title) || parsed.experience_level,
     salary_min: card.salary_min || (parsed.salary ? parsed.salary.min : null),
     salary_max: card.salary_max || (parsed.salary ? parsed.salary.max : null),

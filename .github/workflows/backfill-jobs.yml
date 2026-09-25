@@ -24,6 +24,10 @@ on:
         description: 'Window in days (ignored when full_backfill is true)'
         required: false
         default: '90'
+      run_budget_ms:
+        description: Whole-run soft budget in ms (windowed backfills need this raised)
+        required: false
+        default: '18000000'
       deadline_ms:
         description: Per-scraper soft deadline in ms (backfill needs these lifted too)
         required: false
@@ -73,6 +77,10 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SCRAPER_ONLY: ${{ inputs.scraper }}
           FULL_BACKFILL: ${{ inputs.full_backfill }}
+          # Every run of THIS workflow is a backfill, windowed or not. Without
+          # this a windowed run inherits the cron's budget and per-scraper
+          # timeouts (see the comment in runScrapers.js).
+          BACKFILL_MODE: 'true'
           RECENCY_DAYS: ${{ inputs.recency_days }}
           # Every board's cap, not just the five original high-volume ones.
           # Leaving the rest out meant a "full" backfill still held EchoJobs to
@@ -122,6 +130,13 @@ jobs:
           # timeout three times in that run, discarding 1,500 scraped jobs.
           WRITE_CHUNK_SIZE: '200'
           SCRAPER_TIMEOUT_MS: ${{ inputs.deadline_ms }}
+          # runScrapers only makes RUN_BUDGET_MS unlimited when FULL_BACKFILL is
+          # true. A WINDOWED backfill (full_backfill=false with a wide
+          # recency_days) therefore inherited the 50-minute cron budget: the
+          # 2026-09-24 30-day run reached only 11 of 24 boards before
+          # "Budget exhausted (49.3 min elapsed)" skipped the rest, and gave
+          # GulfTalent a 77-second slice it promptly timed out on.
+          RUN_BUDGET_MS: ${{ inputs.run_budget_ms }}
           # Keep the backfill additive: a run this size must not be able to
           # delete mappings across the existing corpus.
           CATEGORY_ADDITIVE_ONLY: 'true'
