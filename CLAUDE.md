@@ -302,6 +302,12 @@ check it. Merging to `main` deploys nothing.
   fetches and serves as the dedup key. The redirect path varies (`/clickout/`, `/clickout_alt/`,
   `/clickredirect/`, `/subredirect/`) — the card regex must cover all of them or titles run
   together. We iterate the 16 federal **states** rather than the ~90 cities.
+- ⚠️ **`ubuntu-latest` moves under you, and Playwright gates on the exact OS.** On 2026-10-20
+  GitHub flipped `ubuntu-latest` to `ubuntu-26.04`; Playwright 1.60.0 refused to install
+  (`Playwright does not support chromium on ubuntu26.04-x64`), so "Run scrapers" was skipped and
+  nothing was ingested for 8 days while tests stayed green. Support landed in 1.64.x. If every
+  scheduled run fails at "Install Playwright Chromium", compare the `Image:` line in the
+  "Set up job" log of the last green run against the first red one before touching code.
 - **Unhandled rejections are fatal on Node 22**, and `runScrapers.js` installs a
   `process.on('unhandledRejection')` guard because of it. playwright-extra's stealth plugin emits
   `cdpSession.send: Target page, context or browser has been closed` from an async internal handler
