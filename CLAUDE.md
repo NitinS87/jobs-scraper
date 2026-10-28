@@ -244,6 +244,14 @@ check it. Merging to `main` deploys nothing.
      Fixed 1bc6e61. Symptom to watch for: `Batched job lookup failed` in the run log.
 
 
+- ⚠️ **`invalid input syntax for type json` on a `jobs` write is never a column problem** —
+  `jobs` has no json/jsonb columns. It is PostgREST failing to parse the *request body*, almost
+  always a lone UTF-16 surrogate from a `.slice(0, N)`/`substring` that cut an emoji in half. One
+  such row used to fail the whole batch (164 CutShort jobs, run 40568421647). Truncate with
+  `truncate()` from `descriptionParser.js`; `buildJobRecord` also strips lone surrogates and NUL,
+  and `writeJobBatch` bisects class-22/23 errors down to the row and logs its `external_job_id`.
+  Keep that sanitiser the identity on clean text — `content_hash` is computed from its output.
+
 - **Configured slices rot silently.** Found 2026-09-18: 4 of RealWorkFromAnywhere's 5 RSS feeds
   returned HTTP 404 (it had been contributing design jobs only) and CutShort's `/jobs/product-jobs`
   and `/jobs/design-jobs` returned 55 KB empty shells. Both hid behind a per-slice try/catch whose
