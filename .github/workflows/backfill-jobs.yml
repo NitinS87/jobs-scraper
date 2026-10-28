@@ -130,12 +130,11 @@ jobs:
           # timeout three times in that run, discarding 1,500 scraped jobs.
           WRITE_CHUNK_SIZE: '200'
           SCRAPER_TIMEOUT_MS: ${{ inputs.deadline_ms }}
-          # runScrapers only makes RUN_BUDGET_MS unlimited when FULL_BACKFILL is
-          # true. A WINDOWED backfill (full_backfill=false with a wide
-          # recency_days) therefore inherited the 50-minute cron budget: the
-          # 2026-09-24 30-day run reached only 11 of 24 boards before
-          # "Budget exhausted (49.3 min elapsed)" skipped the rest, and gave
-          # GulfTalent a 77-second slice it promptly timed out on.
+          # Explicit, so the run stops with a summary before the job timeout
+          # SIGKILLs it. History: a windowed backfill once inherited the 50-min
+          # cron budget (2026-09-24: 11 of 24 boards, then "Budget exhausted");
+          # the fix overcorrected and made every backfill unlimited, silently
+          # ignoring this input. lib/runBudget.js now honours it in both modes.
           RUN_BUDGET_MS: ${{ inputs.run_budget_ms }}
           # Keep the backfill additive: a run this size must not be able to
           # delete mappings across the existing corpus.

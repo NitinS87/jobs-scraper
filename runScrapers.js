@@ -2,6 +2,7 @@ require('dotenv').config();
 const { processScraperResults } = require('./lib/uploader');
 const { withTimeout } = require('./lib/scraperUtils');
 const { getRecencyConfig } = require('./lib/recency');
+const { resolveRunBudgetMs } = require('./lib/runBudget');
 const { getActiveVerticals } = require('./lib/verticals');
 
 // Node 22 treats an unhandled rejection as fatal, which took down the whole
@@ -33,16 +34,15 @@ const DEFAULT_SCRAPER_TIMEOUT_MS =
   (BACKFILL_MODE ? 60 * 60 * 1000 : 5 * 60 * 1000);
 
 // Soft cap on the whole run. CI's timeout-minutes is the hard kill; this lets us
-// exit cleanly with a summary before GitHub SIGKILLs us mid-upload. Disabled
-// during a backfill, which is expected to run long.
+// exit cleanly with a summary before GitHub SIGKILLs us mid-upload. A backfill
+// defaults to unlimited, but an explicit RUN_BUDGET_MS still applies — the
+// Backfill workflow sets one to finish inside GitHub's 330-minute job cap.
 //
 // Sized from a measured full run: the 15 pre-existing scrapers alone take ~34
 // min (GulfTalent 6.6, NaukriGulf 4.3, Cimix 4.0, YCombinator 3.7, HNHiring
 // 3.1), so a 35-min budget starved every new source at the tail. 50 min leaves
 // the five recency-windowed boards real runway under a 60-min CI hard cap.
-const RUN_BUDGET_MS = BACKFILL_MODE
-  ? Infinity
-  : Number(process.env.RUN_BUDGET_MS) || 50 * 60 * 1000;
+const RUN_BUDGET_MS = resolveRunBudgetMs(process.env, BACKFILL_MODE);
 
 // Don't start a scraper we can't give a fair slice of time to.
 const MIN_SLICE_MS = 45 * 1000;
