@@ -88,10 +88,8 @@ jobs:
           # run would otherwise delete mappings the old keyword map produced
           # across 15,027 already-categorised jobs.
           CATEGORY_ADDITIVE_ONLY: ${{ vars.CATEGORY_ADDITIVE_ONLY || 'true' }}
-          # Both verified by the "Probe Slices" workflow (run 35421978807, from
-          # GitHub's own network): NaukriGulf 8/8 slices at 30 tuples each,
-          # JobsInJapan 7/7. Set the matching repo Variable to 'false' to turn
-          # either back off without a commit.
+          # Verified by the "Probe Slices" workflow (run 35421978807, from
+          # GitHub's own network): NaukriGulf 8/8 slices at 30 tuples each.
+          # Set the repo Variable to 'false' to turn it back off without a commit.
           NAUKRIGULF_VERTICALS_ENABLED: ${{ vars.NAUKRIGULF_VERTICALS_ENABLED || 'true' }}
-          JOBSINJAPAN_VERTICALS_ENABLED: ${{ vars.JOBSINJAPAN_VERTICALS_ENABLED || 'true' }}
         run: node runScrapers.js

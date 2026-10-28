@@ -1,10 +1,10 @@
 /**
  * Validate a board's candidate slice list against the live site.
  *
- * Exists because two boards cannot be verified from a developer machine:
- * NaukriGulf returns ERR_HTTP2_PROTOCOL_ERROR on every path (including the one
- * CI scrapes successfully) and JobsInJapan 403s after the first request. A
- * GitHub runner egresses from the same network the production scraper uses, so
+ * Exists because NaukriGulf cannot be verified from a developer machine: it
+ * returns ERR_HTTP2_PROTOCOL_ERROR on every path (including the one CI scrapes
+ * successfully). JobsInJapan used to 403 after the first request too; since its
+ * 2026-10 redesign a developer machine pages it fine. A GitHub runner egresses from the same network the production scraper uses, so
  * a green probe there is the only evidence that counts —
  * see .github/workflows/probe-slices.yml.
  *
@@ -46,15 +46,14 @@ const BOARDS = {
     delayMs: 2500,
   },
   jobsinjapan: {
-    slices: ['software', 'sales', 'marketing', 'finance', 'designer', 'engineer', 'teacher'],
-    url: (s) => `https://jobsinjapan.com/?s=${encodeURIComponent(s)}&post_type=noo_job`,
-    // Cards are `.loop-item-title a`, per scrapers/jobsinjapan.js:79 — counting
-    // bare /job/ links matched nothing and looked like an empty board.
-    count: (html) => (html.match(/loop-item-title/g) || []).length,
+    // Since the 2026-10 Next.js redesign the board is one unfiltered list
+    // (`?sort=latest`, 30/page); keyword search no longer exists as a slice.
+    slices: ['1', '2', '3', '4'],
+    url: (n) => (n === '1'
+      ? 'https://jobsinjapan.com/jobs/?sort=latest'
+      : `https://jobsinjapan.com/jobs/page/${n}/?sort=latest`),
+    count: (html) => (html.match(/<article class="jij-job-card/g) || []).length,
     playwright: true,
-    // This board 403s a burst. Probe with the scraper's own pacing: the gate to
-    // enable verticals is "N sequential searches all returned results", not
-    // "one URL returned 200".
     delayMs: 6000,
   },
   hyriko: {
