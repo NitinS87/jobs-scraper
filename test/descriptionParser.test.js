@@ -108,3 +108,29 @@ test('job_type is read when the listing does state one', () => {
   assert.equal(parseDescription('<p>Summer internship programme.</p>').job_type, 'INTERNSHIP');
   assert.equal(parseDescription('<p>A full-time permanent position.</p>').job_type, 'FULL_TIME');
 });
+
+// ---------------------------------------------------------------------------
+// Truncation must never split a UTF-16 surrogate pair.
+//
+// Run 40568421647 lost 164 CutShort jobs to one batched insert failing with
+// "invalid input syntax for type json". summary was cut at a fixed 200 UTF-16
+// code units, so an emoji straddling the boundary left a lone high surrogate;
+// JSON.stringify emits it as "\ud83d", which Postgres's JSON parser rejects —
+// and PostgREST parses the whole request body, so one row fails the batch.
+// ---------------------------------------------------------------------------
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+
+test('summary does not end in half an emoji when the cut lands mid-pair', () => {
+  const html = `<p>${'a'.repeat(199)}🚀 We are hiring engineers.</p>`;
+  const { summary } = parseDescription(html);
+  assert.ok(!LONE_SURROGATE.test(summary), `summary ends ${JSON.stringify(summary.slice(-3))}`);
+  assert.ok(summary.length <= 200, 'truncation must still respect the limit');
+});
+
+test('truncate keeps whole pairs and leaves short strings alone', () => {
+  const { truncate } = require('../lib/descriptionParser');
+  assert.equal(truncate('ab🚀', 3), 'ab', 'a pair that does not fit is dropped whole');
+  assert.equal(truncate('ab🚀', 4), 'ab🚀', 'a pair that fits is kept whole');
+  assert.equal(truncate('short', 200), 'short');
+  assert.equal(truncate(null, 10), '');
+});

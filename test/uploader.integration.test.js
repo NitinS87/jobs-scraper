@@ -463,3 +463,107 @@ test('visa_sponsorship keeps its tri-state through the write path', async () => 
   assert.equal(byId.get('ext-2'), true);
   assert.equal(byId.get('ext-3'), false, 'an explicit refusal must stay false');
 });
+
+// ---------------------------------------------------------------------------
+// One malformed row must cost that row, not its batch.
+//
+// Run 40568421647: "Batched job insert failed (164 rows): invalid input syntax
+// for type json" — a single lone surrogate in one CutShort summary discarded
+// all 164 new jobs, because writeJobBatch only bisected on statement timeouts.
+// ---------------------------------------------------------------------------
+const LONE_SURROGATE_RE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+const INVALID_JSON = { code: '22P02', message: 'invalid input syntax for type json' };
+
+test('a row-data error is bisected down to the poison row; the rest land', async () => {
+  const jobs = Array.from({ length: 40 }, (_, i) => makeJob(i + 1));
+  const { uploader, calls } = installMock((s) => {
+    if (s.table === 'jobs' && s.op === 'upsert') {
+      return s.payload.some((r) => r.external_job_id === 'ext-7')
+        ? { data: null, error: INVALID_JSON }
+        : { data: null, error: null };
+    }
+    return handlersFor({}, COMPANIES)(s);
+  });
+
+  const warnings = [];
+  const origWarn = console.warn;
+  console.warn = (...a) => { warnings.push(a.join(' ')); };
+  let stats;
+  try {
+    stats = await uploader.processScraperResults(jobs);
+  } finally {
+    console.warn = origWarn;
+  }
+
+  const upserts = calls.filter((c) => c.table === 'jobs' && c.op === 'upsert');
+  assert.equal(stats.inserted, 39, 'every healthy row must still land');
+  assert.equal(stats.errors, 1, 'only the poison row is lost');
+  assert.ok(upserts.length <= 2 * Math.ceil(Math.log2(40)) + 2,
+    `bisection should be logarithmic, saw ${upserts.length} requests`);
+  assert.ok(warnings.some((w) => w.includes('ext-7')),
+    `the poison row's external_job_id must be logged, got:\n${warnings.join('\n')}`);
+});
+
+test('a systemic error is not bisected into one request per row', async () => {
+  // Permission / schema / network failures hit every row alike. Bisecting them
+  // would turn one failed 500-row batch into ~1,000 REST calls — the exact
+  // request-count blowup the batching exists to prevent.
+  const jobs = Array.from({ length: 40 }, (_, i) => makeJob(i + 1));
+  const { uploader, calls } = installMock((s) => {
+    if (s.table === 'jobs' && s.op === 'upsert') {
+      return { data: null, error: { code: '42501', message: 'permission denied for table jobs' } };
+    }
+    return handlersFor({}, COMPANIES)(s);
+  });
+
+  const origWarn = console.warn;
+  console.warn = () => {};
+  let stats;
+  try {
+    stats = await uploader.processScraperResults(jobs);
+  } finally {
+    console.warn = origWarn;
+  }
+
+  const upserts = calls.filter((c) => c.table === 'jobs' && c.op === 'upsert');
+  assert.equal(upserts.length, 1, `expected one attempt, saw ${upserts.length}`);
+  assert.equal(stats.errors, 40);
+});
+
+test('lone surrogates and NUL from any scraper field never reach the wire', async () => {
+  // ~20 scrapers truncate with their own .slice(0, N), so the write boundary is
+  // the one place that can guarantee a Postgres-parseable body.
+  const jobs = [makeJob(1, {
+    title: 'Engineer \uD83D',
+    summary: `${'x'.repeat(10)}\uD83D`,
+    location: 'Bengaluru\u0000',
+    skills: ['Go', 'Rust\uDE80'],
+  })];
+  const { uploader, calls } = installMock(handlersFor({}, COMPANIES));
+  await uploader.processScraperResults(jobs);
+
+  const row = calls.filter((c) => c.table === 'jobs' && c.op === 'upsert').flatMap((c) => c.payload)[0];
+  for (const [k, v] of Object.entries(row)) {
+    const s = Array.isArray(v) ? v.join('|') : typeof v === 'string' ? v : '';
+    assert.ok(!LONE_SURROGATE_RE.test(s), `${k} still carries a lone surrogate: ${JSON.stringify(s)}`);
+    assert.ok(!s.includes('\u0000'), `${k} still carries NUL`);
+  }
+  assert.equal(row.title, 'Engineer ', 'valid text around the bad unit is kept');
+  assert.deepEqual(row.skills, ['Go', 'Rust']);
+});
+
+test('sanitising is the identity on clean text, so content_hash does not churn', async () => {
+  // content_hash is computed from the built record. If sanitising normalised
+  // anything else (trim, whitespace, emoji) every unchanged row would hash
+  // differently and be rewritten on the next run — the ~39x rewrite churn the
+  // hash was added to stop.
+  const description = '  <p>Ship it 🚀 — café, naïve, 日本語.</p>\n  ';
+  const jobs = [makeJob(1, { description, title: '  Padded 🚀 Title  ', location: 'Remote ' })];
+  const { uploader, calls } = installMock(handlersFor({}, COMPANIES));
+  await uploader.processScraperResults(jobs);
+
+  const row = calls.filter((c) => c.table === 'jobs' && c.op === 'upsert').flatMap((c) => c.payload)[0];
+  assert.equal(row.description, description);
+  assert.equal(row.title, '  Padded 🚀 Title  ');
+  assert.equal(row.location, 'Remote ');
+});

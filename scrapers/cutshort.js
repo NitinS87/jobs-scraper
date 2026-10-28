@@ -5,6 +5,7 @@ const {
   parseDescription,
   parseExperienceLevelFromTitle,
   stripHtml,
+  truncate,
   parseCountryCode,
 } = require('../lib/descriptionParser');
 const { delay } = require('../lib/scraperUtils');
@@ -125,7 +126,7 @@ function buildJob(raw) {
   } : null;
 
   const country = parseCountryCode(locationStr) || 'IN';
-  const summary = parsed.summary || stripHtml(description).slice(0, 200);
+  const summary = parsed.summary || truncate(stripHtml(description), 200);
 
   return {
     title: raw.headline,
