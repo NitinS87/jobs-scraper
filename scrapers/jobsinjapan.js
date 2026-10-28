@@ -1,6 +1,7 @@
 const playwright = require("playwright-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const UserAgent = require("user-agents");
+const { isChallengeResponse } = require("../lib/scraperUtils");
 
 playwright.chromium.use(StealthPlugin());
 
@@ -77,7 +78,17 @@ async function scrapeJobsInJapan() {
     // The board 403s a burst, so the searches are paced like the detail fetches.
     for (const startUrl of START_URLS) {
       try {
-        await page.goto(startUrl, { waitUntil: "domcontentloaded" });
+        const res = await page.goto(startUrl, { waitUntil: "domcontentloaded" });
+        // Since ~2026-10-10 every path, robots.txt included, serves a Cloudflare
+        // managed challenge. Waiting 15s per search for a selector that cannot
+        // appear just burns run budget, so stop at the first challenge response.
+        if (res && isChallengeResponse(res.status(), res.headers())) {
+          console.error(
+            "JobsInJapan: Cloudflare managed challenge on the search page — skipping the board "
+            + "this run (blocked since ~2026-10-10, see CLAUDE.md)",
+          );
+          break;
+        }
         await page.waitForSelector("div.job-content-wrap", { timeout: 15000 });
       } catch (err) {
         console.warn(`JobsInJapan: search failed ${startUrl}: ${err.message}`);
