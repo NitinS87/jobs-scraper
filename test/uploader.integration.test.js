@@ -567,3 +567,70 @@ test('sanitising is the identity on clean text, so content_hash does not churn',
   assert.equal(row.title, '  Padded 🚀 Title  ');
   assert.equal(row.location, 'Remote ');
 });
+
+// ---------------------------------------------------------------------------
+// Company resolution is the upload bottleneck on a big board. Local backfill
+// 2026-10-28: Teal's 8,573 jobs spent 25+ min creating ~80 companies/min, one
+// awaited logo fetch + insert at a time, before a single job row was written.
+// ---------------------------------------------------------------------------
+function companyHandlers({ delayMs = 5, onInsert } = {}) {
+  let inFlight = 0;
+  let maxInFlight = 0;
+  let nextId = 0;
+  const base = handlersFor({}, COMPANIES);
+  const handler = (s) => {
+    if (s.table === 'companies' && s.op === 'insert') {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      const id = `new-co-${++nextId}`;
+      if (onInsert) onInsert(s.payload, id);
+      return new Promise((r) => setTimeout(() => { inFlight--; r({ data: { id }, error: null }); }, delayMs));
+    }
+    return base(s);
+  };
+  return { handler, peak: () => maxInFlight };
+}
+
+test('new companies are created concurrently, within the configured bound', async () => {
+  const prev = process.env.COMPANY_CONCURRENCY;
+  process.env.COMPANY_CONCURRENCY = '4';
+  try {
+    const jobs = Array.from({ length: 20 }, (_, i) => makeJob(i + 1, { company: { name: `Newco ${i + 1}` } }));
+    const { handler, peak } = companyHandlers();
+    const { uploader } = installMock(handler);
+    const stats = await uploader.processScraperResults(jobs);
+
+    assert.equal(stats.inserted, 20);
+    assert.ok(peak() > 1, `company creation must overlap, peak in-flight was ${peak()}`);
+    assert.ok(peak() <= 4, `concurrency must respect COMPANY_CONCURRENCY=4, peak was ${peak()}`);
+  } finally {
+    if (prev === undefined) delete process.env.COMPANY_CONCURRENCY;
+    else process.env.COMPANY_CONCURRENCY = prev;
+  }
+});
+
+test('each job keeps its own company id when companies resolve out of order', async () => {
+  const created = new Map();
+  const jobs = Array.from({ length: 12 }, (_, i) => makeJob(i + 1, { company: { name: `Newco ${(i % 4) + 1}` } }));
+  const { handler } = companyHandlers({ onInsert: (p, id) => created.set(p.name, id) });
+  const { uploader, calls } = installMock(handler);
+  await uploader.processScraperResults(jobs);
+
+  assert.equal(created.size, 4, 'a company named by several jobs is created exactly once');
+  const rows = calls.filter((c) => c.table === 'jobs' && c.op === 'upsert').flatMap((c) => c.payload);
+  for (const row of rows) {
+    const job = jobs.find((j) => j.external_job_id === row.external_job_id);
+    assert.equal(row.company_id, created.get(job.company.name), `${row.external_job_id} got the wrong company`);
+  }
+});
+
+test('an existing company is backfilled once per run, not once per job', async () => {
+  const sparse = [{ id: 'co-1', name: 'Acme 1', logo_url: 'x', website: 'https://x.test' }];
+  const jobs = Array.from({ length: 10 }, (_, i) => makeJob(i + 1, { company: { name: 'Acme 1', location: 'Berlin' } }));
+  const { uploader, calls } = installMock(handlersFor({}, sparse));
+  await uploader.processScraperResults(jobs);
+
+  const updates = calls.filter((c) => c.table === 'companies' && c.op === 'update');
+  assert.equal(updates.length, 1, `expected one backfill UPDATE, got ${updates.length}`);
+  assert.equal(updates[0].payload.location, 'Berlin');
+});

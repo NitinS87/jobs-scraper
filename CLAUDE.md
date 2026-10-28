@@ -196,6 +196,10 @@ therefore optimised for **request count**, not response size:
 - **`job_category_mappings` has a composite PK `(job_id, category_id)`**, so mappings upsert with
   `ignoreDuplicates` and only genuinely-dropped ids are deleted. The old blanket
   DELETE-then-INSERT per job was ~880K calls.
+- **New companies are resolved concurrently, once per distinct name, before the job loop**
+  (`resolveCompanies()`, `COMPANY_CONCURRENCY`, default 8). Each new company costs a logo fetch,
+  a storage upload and an insert; awaited per job in sequence this capped Teal's 8,573-job upload
+  at ~80 companies/min (2026-10-28) and backfilled an existing company once per *job*.
 - **Companies are prefetched once per process** (`id, name` only, paged) into a `lower(name)` map,
   reproducing the old `ilike()` semantics without a round-trip per company. Wide enrichment
   columns are fetched only for the companies a run actually touches.
