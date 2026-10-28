@@ -113,11 +113,6 @@ These two are planned but not implemented; both need free registration:
   blocked. The legacy `public.api.careerjet.net` endpoint is retired (401, "use v4 instead"). The
   only route is the Careerjet **v4 API** (`search.api.careerjet.net/v4/query`), which needs a free
   publisher key from careerjet.com/partners/api and caps at 1,000 results per query.
-- **jobsinjapan.com** — REJECTED 2026-10-28, same reason as careerjet: since ~2026-10-10 every
-  path, `robots.txt` included, answers 403 with `cf-mitigated: challenge` (a Cloudflare *managed*
-  challenge). Last new row 2026-10-09. The scraper stays registered but stops on the first
-  challenge response (`isChallengeResponse()` in `lib/scraperUtils.js`) instead of burning 6×15s
-  on selector timeouts, so it recovers on its own if the challenge is lifted. Do not try to defeat it.
 
 ## Categorisation
 
@@ -281,6 +276,15 @@ check it. Merging to `main` deploys nothing.
   (403)`, every run) while the identical code on a developer machine gets 35k+ jobs; last CI insert
   2026-10-19. Treat it as Akamai blocking the runner — do not tune the scraper to evade it. Ingest
   it locally: `SCRAPER_ONLY=GulfTalent node runScrapers.js`.
+- **JobsInJapan**: redesigned from WordPress to Next.js around 2026-10-10; the old
+  `div.job-content-wrap` selector silently returned 0 jobs for ~18 days. The whole board is one
+  list, `/jobs/?sort=latest` then `/jobs/page/N/?sort=latest` (30/page, 108 jobs on 2026-10-28),
+  cards are `article.jij-job-card h2 a`, and every detail page carries full `JobPosting` JSON-LD.
+  ⚠️ curl/axios get `403 cf-mitigated: challenge` but the Playwright browser gets the page — a
+  curl probe made it look blocked and it was briefly (wrongly) marked rejected. Check what the
+  browser receives before calling a board dead. `external_job_id` is the URL slug with lowercase
+  `%xx` escapes (`slugId()`), the pre-redesign format. `media.jobsinjapan.com` logos 403 the
+  uploader, so the scraper sends none.
 - **Cimix**: Next.js RSC; `?page`/`?offset` are ignored, only `?categoryId=<id>` changes the result set (50 jobs/category). Iterate the tech/professional category IDs and dedupe. Detail pages have clean JSON-LD with English-translated titles and ISO `addressCountry`.
 - **SourcingXpress**: recruiter-sourcing SaaS — only ~10 public jobs at `/search` (no working pagination), no JSON-LD. Title/company/location parsed from `og:title` ("X position at Y in Z"); INR "Lacs/Cr" salaries handled in-scraper.
 - **WorkInDenmark**: Duende BFF. `/bff/FindJob/Search?resultsPerPage=100&pageNumber=N` returns full job records incl. full-HTML `description` — no detail pages needed. Requires the session cookie (set by loading `/find-job` in Playwright) **plus** the anti-forgery header `X-CSRF: 1`; without it the API returns 401. Call the API from page context via `page.evaluate(fetch(...))`.

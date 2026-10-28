@@ -1,321 +1,187 @@
 const playwright = require("playwright-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const UserAgent = require("user-agents");
-const { isChallengeResponse } = require("../lib/scraperUtils");
+const { isCloudflareChallenge } = require("../lib/scraperUtils");
 
 playwright.chromium.use(StealthPlugin());
 
-// Vertical slices are UNVERIFIED: this host 403s after the first request from a
-// developer network, so a multi-term loop is exactly the traffic pattern that
-// trips its rate limiter. Run the "Probe Slices" workflow first — the gate is
-// "N sequential searches all returned results", not "one URL returned 200" —
-// then set JOBSINJAPAN_VERTICALS_ENABLED=true. Until then behaviour is unchanged.
-const SEARCH_TERMS = ["software", "sales", "marketing", "finance", "designer", "engineer"];
-
-const VERTICALS_ENABLED = /^(1|true|yes|on)$/i.test(
-  process.env.JOBSINJAPAN_VERTICALS_ENABLED || ""
-);
-
-const buildSearchUrl = (term) =>
-  `https://jobsinjapan.com/?s=${encodeURIComponent(term)}&location=&type=&_noo_job_field_english_level=&_noo_job_field_japanese_level=&_noo_job_field_employer_type=&post_type=noo_job`;
-
-const START_URLS = (VERTICALS_ENABLED ? SEARCH_TERMS : ["software"]).map(buildSearchUrl);
-
-const START_URL = START_URLS[0];
+// The site moved from WordPress to Next.js around 2026-10-10. The old search
+// (`/?s=<term>&post_type=noo_job`) now redirects to `/jobs/?s=<term>` and the
+// `div.job-content-wrap` cards are gone, which is why the board silently
+// returned 0 jobs. The whole board is small (108 jobs on 2026-10-28, 30 per
+// page), so instead of keyword slices this pages the unfiltered "latest" list
+// and reads each job's JobPosting JSON-LD.
+//
+// ⚠️ Plain HTTP clients (curl/axios) get `403 cf-mitigated: challenge`; the
+// browser gets the page normally. That is why this stays on Playwright.
+const BASE = "https://jobsinjapan.com";
+const MAX_PAGES = Number(process.env.JOBSINJAPAN_MAX_PAGES) || 10;
+const MAX_JOBS = Number(process.env.JOBSINJAPAN_MAX_JOBS) || 500;
 
 const randomDelay = (min = 1000, max = 2500) =>
   new Promise((res) =>
     setTimeout(res, Math.floor(Math.random() * (max - min) + min))
   );
 
-async function extractText(page, selector) {
+const listingUrl = (n) =>
+  n <= 1 ? `${BASE}/jobs/?sort=latest` : `${BASE}/jobs/page/${n}/?sort=latest`;
+
+/**
+ * The last path segment, normalised to lowercase percent-escapes — the form
+ * every pre-redesign row stored as external_job_id, so old rows still dedupe.
+ */
+function slugId(url) {
+  const segment = String(url).split("?")[0].split("/").filter(Boolean).pop() || "";
+  let decoded = segment;
   try {
-    const el = await page.$(selector);
-    if (!el) return "";
-    return await el.innerText();
-  } catch {
-    return "";
-  }
+    decoded = decodeURIComponent(segment);
+  } catch {}
+  return encodeURIComponent(decoded).replace(/%[0-9A-F]{2}/g, (m) => m.toLowerCase());
 }
 
-async function extractHtml(page, selector) {
-  try {
-    const el = await page.$(selector);
-    if (!el) return "";
-    return await el.innerHTML();
-  } catch {
-    return "";
-  }
+function mapEmploymentType(t) {
+  if (!t) return null;
+  const upper = String(Array.isArray(t) ? t[0] : t).toUpperCase().replace(/[\s-]/g, "_");
+  if (upper.includes("FULL")) return "FULL_TIME";
+  if (upper.includes("PART")) return "PART_TIME";
+  if (upper.includes("INTERN")) return "INTERNSHIP";
+  if (upper.includes("CONTRACT") || upper.includes("TEMPORARY")) return "CONTRACT";
+  if (upper.includes("FREELANCE")) return "FREELANCE";
+  return null;
 }
 
-async function extractHref(page, selector) {
-  try {
-    const el = await page.$(selector);
-    if (!el) return "";
-    return await el.getAttribute("href") || "";
-  } catch {
-    return "";
-  }
+/** Map a detail page's JobPosting JSON-LD onto the standard job shape. */
+function parseJobPosting(ld) {
+  if (!ld || ld["@type"] !== "JobPosting") return null;
+  const title = (ld.title || "").trim();
+  if (!title || !ld.url) return null;
+
+  const address = (ld.jobLocation && ld.jobLocation.address) || {};
+  const location = [...new Set([address.addressLocality, address.addressRegion].filter(Boolean))].join(", ");
+  const is_remote = /telecommute/i.test(String(ld.jobLocationType || ""))
+    || /\bremote\b/i.test(`${title} ${location}`);
+
+  const salaryValue = (ld.baseSalary && ld.baseSalary.value) || {};
+  const salary_min = Number(salaryValue.minValue) || null;
+  const salary_max = Number(salaryValue.maxValue) || null;
+
+  const org = ld.hiringOrganization || {};
+  const posted = ld.datePosted ? new Date(ld.datePosted) : null;
+
+  return {
+    title,
+    source_url: ld.url,
+    description: ld.description || "",
+    posted_at: posted && !isNaN(posted.getTime()) ? posted.toISOString() : null,
+    external_job_id: slugId(ld.url),
+    external_source: "JobsInJapan",
+    source_type: "SCRAPER",
+    source_base_url: BASE,
+    is_remote,
+    location,
+    country_code: "JP",
+    job_type: mapEmploymentType(ld.employmentType),
+    salary_min,
+    salary_max,
+    salary_currency: salary_min || salary_max ? ld.baseSalary.currency || "JPY" : null,
+    categories: [],
+    company: {
+      name: org.name || null,
+      // `url` is the board's own company page; `sameAs` is the employer's site.
+      website: org.sameAs || null,
+      // org.logo lives on media.jobsinjapan.com, which 403s the uploader's axios
+      // fetch like the rest of the Cloudflare-fronted host (64 of 64 on the
+      // 2026-10-28 run). Leaving it null sends the uploader straight to the
+      // website favicon fallback instead of a doomed request per company.
+      logo_url: null,
+      country_code: "JP",
+    },
+  };
 }
 
 async function scrapeJobsInJapan() {
   const browser = await playwright.chromium.launch({ headless: true });
 
-  const context = await browser.newContext({
-    userAgent: new UserAgent().toString(),
-    locale: "en-US",
-    timezoneId: "Asia/Tokyo",
-  });
-
-  const page = await context.newPage();
-
   try {
-    const listingData = [];
-    const seenLinks = new Set();
+    const context = await browser.newContext({
+      userAgent: new UserAgent().toString(),
+      locale: "en-US",
+      timezoneId: "Asia/Tokyo",
+    });
+    const page = await context.newPage();
 
-    // One search per vertical. With the flag off START_URLS is just the
-    // software search, so this is byte-identical to the previous behaviour.
-    // The board 403s a burst, so the searches are paced like the detail fetches.
-    for (const startUrl of START_URLS) {
+    const links = [];
+    const seen = new Set();
+
+    for (let n = 1; n <= MAX_PAGES && links.length < MAX_JOBS; n++) {
+      const url = listingUrl(n);
       try {
-        const res = await page.goto(startUrl, { waitUntil: "domcontentloaded" });
-        // Since ~2026-10-10 every path, robots.txt included, serves a Cloudflare
-        // managed challenge. Waiting 15s per search for a selector that cannot
-        // appear just burns run budget, so stop at the first challenge response.
-        if (res && isChallengeResponse(res.status(), res.headers())) {
-          console.error(
-            "JobsInJapan: Cloudflare managed challenge on the search page — skipping the board "
-            + "this run (blocked since ~2026-10-10, see CLAUDE.md)",
-          );
-          break;
-        }
-        await page.waitForSelector("div.job-content-wrap", { timeout: 15000 });
+        await page.goto(url, { waitUntil: "domcontentloaded" });
+        await page.waitForSelector("article.jij-job-card", { timeout: 15000 });
       } catch (err) {
-        console.warn(`JobsInJapan: search failed ${startUrl}: ${err.message}`);
-        continue;
+        const html = await page.content().catch(() => "");
+        const reason = isCloudflareChallenge(html) ? "Cloudflare challenge" : err.message;
+        // Page 1 failing means the layout changed again or we are blocked —
+        // say so loudly rather than returning a quiet 0.
+        (n === 1 ? console.error : console.warn)(`JobsInJapan: listing ${url} failed: ${reason}`);
+        break;
       }
 
-      const listings = await page.$$("div.job-content-wrap");
-      let added = 0;
-
-      for (const card of listings) {
-        const titleEl = await card.$(".loop-item-title a");
-        const companyEl = await card.$(".company-name");
-        const locationEl = await card.$(".job-location");
-
-        const jobTitle = titleEl ? await titleEl.innerText() : "";
-        const jobLink = titleEl ? await titleEl.getAttribute("href") : "";
-        const companyName = companyEl ? await companyEl.innerText() : "";
-        const location = locationEl ? await locationEl.innerText() : "";
-
-        const link = (jobLink || "").trim();
-        if (!link || seenLinks.has(link)) continue;
-        seenLinks.add(link);
-        added += 1;
-
-        listingData.push({
-          jobTitle: jobTitle.trim(),
-          jobLink: link,
-          companyName: companyName.trim(),
-          location: location.trim(),
-        });
-      }
-
-      console.log(
-        `JobsInJapan: ${decodeURIComponent((startUrl.match(/[?&]s=([^&]*)/) || [])[1] || "?")} → ${listings.length} cards (${added} new)`
+      const hrefs = await page.$$eval("article.jij-job-card h2 a[href]", (as) =>
+        as.map((a) => a.href)
       );
-      if (START_URLS.length > 1) await randomDelay(2000, 4000);
-    }
-
-    const results = [];
-
-    for (const job of listingData) {
-      if (!job.jobLink) continue;
-
-      const jobPage = await context.newPage();
-
-      try {
-        await jobPage.goto(job.jobLink, { waitUntil: "domcontentloaded" });
-        await randomDelay();
-
-        // Extract description from detail page
-        let description = await extractHtml(jobPage, ".job-desc");
-        if (!description) {
-          description = await extractHtml(jobPage, ".noo-main");
-        }
-
-        // Extract job overview details
-        const jobOverview = await extractText(jobPage, ".job-details");
-
-        // Combine overview + description
-        if (jobOverview && description) {
-          description = jobOverview + "\n\n" + description;
-        } else if (jobOverview) {
-          description = jobOverview;
-        }
-
-        // Extract posted date — try time[datetime] attribute first, then visible text patterns
-        let postedAt = null;
-        try {
-          const timeEl = await jobPage.$('time[datetime]');
-          if (timeEl) {
-            const dt = await timeEl.getAttribute('datetime');
-            if (dt) {
-              const d = new Date(dt);
-              if (!isNaN(d.getTime())) postedAt = d.toISOString();
-            }
-          }
-        } catch {}
-        // Try visible date in job overview text
-        if (!postedAt && jobOverview) {
-          // Match patterns like "March 15, 2026", "2026-03-15", "15 Mar 2026"
-          const datePatterns = [
-            /(?:Posted|Date|Published|Updated)[:\s]*(\w+\s+\d{1,2},?\s+\d{4})/i,
-            /(?:Posted|Date|Published|Updated)[:\s]*(\d{4}[-/]\d{1,2}[-/]\d{1,2})/i,
-            /(\d{1,2}\s+\w+\s+\d{4})/,
-            /(\w+\s+\d{1,2},?\s+\d{4})/,
-          ];
-          for (const pattern of datePatterns) {
-            const m = jobOverview.match(pattern);
-            if (m) {
-              const d = new Date(m[1].trim());
-              if (!isNaN(d.getTime())) { postedAt = d.toISOString(); break; }
-            }
-          }
-        }
-        // Last resort: use page's meta date
-        if (!postedAt) {
-          try {
-            const metaDate = await jobPage.$('meta[property="article:published_time"], meta[name="date"]');
-            if (metaDate) {
-              const content = await metaDate.getAttribute('content');
-              if (content) {
-                const d = new Date(content);
-                if (!isNaN(d.getTime())) postedAt = d.toISOString();
-              }
-            }
-          } catch {}
-        }
-
-        // Extract salary from job overview text
-        let salary_min = null, salary_max = null, salary_currency = null;
-        const salaryText = jobOverview || description || "";
-        // ¥200,000 - ¥350,000 or 200,000 - 350,000
-        const yenMatch = salaryText.match(/[¥￥]\s?([\d,]+)\s*[-–—~]+\s*[¥￥]?\s?([\d,]+)/);
-        if (yenMatch) {
-          salary_min = parseInt(yenMatch[1].replace(/,/g, ""), 10);
-          salary_max = parseInt(yenMatch[2].replace(/,/g, ""), 10);
-          salary_currency = "JPY";
-        }
-        // Also try "¥3,000,000 - ¥4,500,000 / Year"
-        if (!salary_min) {
-          const annualMatch = salaryText.match(/([\d,]+)\s*[-–—~]+\s*([\d,]+)\s*\/\s*(?:Year|Annual|Month)/i);
-          if (annualMatch) {
-            salary_min = parseInt(annualMatch[1].replace(/,/g, ""), 10);
-            salary_max = parseInt(annualMatch[2].replace(/,/g, ""), 10);
-            salary_currency = "JPY";
-          }
-        }
-
-        // Extract job type from overview text
-        let job_type = null;
-        const overviewLower = (jobOverview || "").toLowerCase();
-        if (/\bfull[- ]?time\b/.test(overviewLower)) job_type = "FULL_TIME";
-        else if (/\bpart[- ]?time\b/.test(overviewLower)) job_type = "PART_TIME";
-        else if (/\bcontract\b/.test(overviewLower)) job_type = "CONTRACT";
-        else if (/\bfreelance\b/.test(overviewLower)) job_type = "FREELANCE";
-        else if (/\bintern\b/.test(overviewLower)) job_type = "INTERNSHIP";
-
-        // Detect remote from location or description
-        const locationLower = (job.location || "").toLowerCase();
-        const is_remote = locationLower.includes("remote") || overviewLower.includes("remote");
-
-        // Extract company website — look for external links, not the generic /companies/ directory
-        let companyWebsite = null;
-        try {
-          const links = await jobPage.$$('a[href^="http"]');
-          for (const link of links) {
-            const href = await link.getAttribute('href');
-            if (href && !href.includes('jobsinjapan.com') && !href.includes('twitter.com') &&
-                !href.includes('linkedin.com') && !href.includes('facebook.com') &&
-                !href.includes('github.com')) {
-              companyWebsite = href;
-              break;
-            }
-          }
-        } catch {}
-        // Fallback: get specific company page link (not the generic directory)
-        if (!companyWebsite) {
-          try {
-            const compLinks = await jobPage.$$('a[href*="/companies/"]');
-            for (const link of compLinks) {
-              const href = await link.getAttribute('href');
-              // Only use if it's a specific company page, not the generic directory
-              if (href && href !== 'https://jobsinjapan.com/companies/' &&
-                  href !== '/companies/' && href.match(/\/companies\/.+/)) {
-                companyWebsite = href;
-                break;
-              }
-            }
-          } catch {}
-        }
-
-        // Extract company logo
-        const companyLogo = await (async () => {
-          try {
-            const el = await jobPage.$('.company-desc img, .noo-sidebar img');
-            return el ? await el.getAttribute('src') : null;
-          } catch { return null; }
-        })();
-
-        const urlPath = job.jobLink.split("/").filter(Boolean).pop() || job.jobLink;
-
-        const result = {
-          title: job.jobTitle,
-          source_url: job.jobLink,
-          description,
-          posted_at: postedAt,
-          external_job_id: urlPath,
-          external_source: "JobsInJapan",
-          source_type: "SCRAPER",
-          source_base_url: "https://jobsinjapan.com",
-          is_remote,
-          location: job.location,
-          country_code: "JP",
-          categories: [],
-          company: {
-            name: job.companyName || null,
-            website: companyWebsite || null,
-            logo_url: companyLogo || null,
-            country_code: "JP",
-          },
-        };
-
-        if (job_type) result.job_type = job_type;
-        if (salary_min) {
-          result.salary_min = salary_min;
-          result.salary_max = salary_max;
-          result.salary_currency = salary_currency;
-        }
-
-        results.push(result);
-      } catch (err) {
-        console.log("Failed job:", job.jobLink);
+      let added = 0;
+      for (const href of hrefs) {
+        if (seen.has(href)) continue;
+        seen.add(href);
+        links.push(href);
+        added += 1;
       }
+      console.log(`JobsInJapan: page ${n} → ${hrefs.length} cards (${added} new)`);
 
-      await jobPage.close();
+      const hasNext = await page.$('a[aria-label="Next page"]');
+      if (!added || !hasNext) break;
       await randomDelay();
     }
 
-    await browser.close();
+    const results = [];
+    for (const link of links.slice(0, MAX_JOBS)) {
+      try {
+        await page.goto(link, { waitUntil: "domcontentloaded" });
+        const blocks = await page.$$eval('script[type="application/ld+json"]', (ss) =>
+          ss.map((s) => s.textContent)
+        );
+        let posting = null;
+        for (const raw of blocks) {
+          let data;
+          try {
+            data = JSON.parse(raw);
+          } catch {
+            continue;
+          }
+          const nodes = Array.isArray(data) ? data : data["@graph"] || [data];
+          posting = nodes.find((x) => x && x["@type"] === "JobPosting") || posting;
+        }
+        const job = parseJobPosting(posting);
+        if (job) results.push(job);
+        else console.warn(`JobsInJapan: no JobPosting JSON-LD on ${link}`);
+      } catch (err) {
+        console.warn(`JobsInJapan: detail failed ${link}: ${err.message}`);
+      }
+      await randomDelay();
+    }
 
-    console.log(`Scraped ${results.length} jobs from JobsInJapan`);
+    console.log(`Scraped ${results.length} jobs from JobsInJapan (${links.length} listed)`);
     return results;
   } catch (err) {
-    await browser.close();
     console.error("Error scraping JobsInJapan:", err.message);
     return [];
+  } finally {
+    await browser.close();
   }
 }
 
 module.exports = scrapeJobsInJapan;
+module.exports.parseJobPosting = parseJobPosting;
+module.exports.slugId = slugId;
+module.exports.listingUrl = listingUrl;
