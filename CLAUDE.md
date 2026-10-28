@@ -113,6 +113,11 @@ These two are planned but not implemented; both need free registration:
   blocked. The legacy `public.api.careerjet.net` endpoint is retired (401, "use v4 instead"). The
   only route is the Careerjet **v4 API** (`search.api.careerjet.net/v4/query`), which needs a free
   publisher key from careerjet.com/partners/api and caps at 1,000 results per query.
+- **jobsinjapan.com** — REJECTED 2026-10-28, same reason as careerjet: since ~2026-10-10 every
+  path, `robots.txt` included, answers 403 with `cf-mitigated: challenge` (a Cloudflare *managed*
+  challenge). Last new row 2026-10-09. The scraper stays registered but stops on the first
+  challenge response (`isChallengeResponse()` in `lib/scraperUtils.js`) instead of burning 6×15s
+  on selector timeouts, so it recovers on its own if the challenge is lifted. Do not try to defeat it.
 
 ## Categorisation
 
@@ -265,7 +270,13 @@ check it. Merging to `main` deploys nothing.
 - `.env` is gitignored — needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
 - NaukriGulf, TokyoDev, JobsInJapan, WorkInDenmark, Wellfound, and SimplyHired use Playwright (run `pnpm exec playwright install chromium` if needed)
 - Each scraper run is wrapped in a 5-minute timeout in `runScrapers.js` to prevent a hung Playwright page from stalling the whole pipeline
-- **GulfTalent**: bare axios gets 403; full browser-like headers (Sec-Ch-Ua, Sec-Fetch-*) pass. The desktop `/jobs/search` is an AngularJS SPA — scrape the server-rendered **mobile** site `/mobile/search/jobs-in-_/all/{page}` (25 jobs/page) and its `/mobile/<country>/jobs/<slug>-<id>` detail pages (JSON-LD JobPosting). Country comes from the URL segment.
+- **GulfTalent**: Akamai-protected. A stealth browser loads `/jobs/search`, then pages the JSON API
+  (`/api/jobs/search`, 200/page) with **same-origin** `fetch` from page context — cross-origin axios
+  is blocked. Detail pages carry JSON-LD JobPosting. ⚠️ Since the 2026-10-20 switch to
+  `ubuntu-26.04` runners the API answers **403 to GitHub Actions** (`API offset 0 failed: non-JSON
+  (403)`, every run) while the identical code on a developer machine gets 35k+ jobs; last CI insert
+  2026-10-19. Treat it as Akamai blocking the runner — do not tune the scraper to evade it. Ingest
+  it locally: `SCRAPER_ONLY=GulfTalent node runScrapers.js`.
 - **Cimix**: Next.js RSC; `?page`/`?offset` are ignored, only `?categoryId=<id>` changes the result set (50 jobs/category). Iterate the tech/professional category IDs and dedupe. Detail pages have clean JSON-LD with English-translated titles and ISO `addressCountry`.
 - **SourcingXpress**: recruiter-sourcing SaaS — only ~10 public jobs at `/search` (no working pagination), no JSON-LD. Title/company/location parsed from `og:title` ("X position at Y in Z"); INR "Lacs/Cr" salaries handled in-scraper.
 - **WorkInDenmark**: Duende BFF. `/bff/FindJob/Search?resultsPerPage=100&pageNumber=N` returns full job records incl. full-HTML `description` — no detail pages needed. Requires the session cookie (set by loading `/find-job` in Playwright) **plus** the anti-forgery header `X-CSRF: 1`; without it the API returns 401. Call the API from page context via `page.evaluate(fetch(...))`.
@@ -329,7 +340,9 @@ check it. Merging to `main` deploys nothing.
   comma-split branch (via `ISO_CODES`), never in free text, because NO/IN/IT/IS/AT/BE are English
   words — and that branch runs **before** the US-state check, since DE/IN/LA/MS/OK/OR/PA/WA are both
   ISO codes and US state abbreviations ("Berlin, DE" used to resolve to US).
-- **Hyriko**: ⚠️ **the host stopped accepting TCP connections on 2026-09-22** — unreachable from
+- **Hyriko**: ⚠️ **the host stopped accepting TCP connections on 2026-09-22** (still down
+  2026-10-28: domain active until 2027-05 on Cloudflare NS, A record → 222.167.207.56 refuses
+  connections in <50 ms, so it costs nothing per run) — unreachable from
   this machine, from GitHub Actions and via a third-party proxy, having served content normally
   hours earlier. DNS points at 222.167.207.56 (China Telecom), implausible for an Indian job
   board, so suspect a DNS lapse rather than a block. Verify with `node scripts/probe-slices.js
